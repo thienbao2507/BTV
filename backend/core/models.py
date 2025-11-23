@@ -427,7 +427,7 @@ class BattleVote(models.Model):
         related_name="battle_votes",
         null=True,
         blank=True,
-        db_column="giam_khao_id",   # 👈 ĐẶT ĐÚNG TÊN CỘT ĐANG CÓ TRONG DB
+        db_column="giam_khao_id",
     )
     entry = models.ForeignKey(
         ThiSinhCapThiDau,
@@ -442,6 +442,12 @@ class BattleVote(models.Model):
         null=True,
         blank=True,
         help_text="Nhận xét của BGD (tuỳ chọn)"
+    )
+    # NEW: tick “♥ Tim” (không bắt buộc)
+    heart = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Ưu tiên (♥) của giám khảo"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -458,5 +464,7 @@ class BattleVote(models.Model):
         gk = self.giamKhao.maNV if self.giamKhao else "N/A"
         ts = getattr(self.entry.thiSinh, "maNV", self.entry.thiSinh_id)
         pair_code = getattr(self.entry.pair, "maCapDau", self.entry.pair_id)
-        return f"Vote {self.stars}★ - {gk} -> {ts} ({pair_code})"
+        # thêm ký hiệu tim để dễ debug
+        heart_flag = " ♥" if getattr(self, "heart", False) else ""
+        return f"Vote {self.stars}★{heart_flag} - {gk} -> {ts} ({pair_code})"
 

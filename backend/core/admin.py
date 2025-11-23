@@ -102,8 +102,9 @@ class CapThiDauAdmin(admin.ModelAdmin):
 class BattleVoteInline(admin.TabularInline):
     model = BattleVote
     extra = 0
-    fields = ("giamKhao", "stars", "note", "created_at", "updated_at")
+    fields = ("giamKhao", "stars", "heart", "note", "created_at", "updated_at")  # + heart
     readonly_fields = ("created_at", "updated_at")
+
 
 @admin.register(ThiSinhCapThiDau)
 class ThiSinhCapThiDauAdmin(admin.ModelAdmin):
@@ -123,8 +124,8 @@ class ThiSinhCapThiDauAdmin(admin.ModelAdmin):
 
 @admin.register(BattleVote)
 class BattleVoteAdmin(admin.ModelAdmin):
-    list_display = ("id", "giamKhao", "entry", "stars", "short_note", "created_at", "updated_at")
-    list_filter = ("stars", "giamKhao", "entry__pair__cuocThi")
+    list_display = ("id", "giamKhao", "entry", "stars", "heart", "short_note", "created_at", "updated_at")  # + heart
+    list_filter = ("heart", "stars", "giamKhao", "entry__pair__cuocThi")  # + heart filter
     search_fields = (
         "giamKhao__maNV",
         "giamKhao__hoTen",
@@ -132,6 +133,7 @@ class BattleVoteAdmin(admin.ModelAdmin):
         "entry__thiSinh__hoTen",
         "entry__pair__maCapDau",
     )
+
 
     def short_note(self, obj):
         if not obj.note:

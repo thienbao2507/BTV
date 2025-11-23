@@ -318,7 +318,8 @@ def _final_columns_and_rows(ct: CuocThi):
     - Cột điểm: Tổng điểm (vòng Chung kết), Đối kháng (sao TB, 1 số thập phân)
     """
     info_titles = ['STT', 'Mã NV', 'Họ tên', 'Đơn vị', 'Chi nhánh', 'Vùng', 'Nhóm', 'Email']
-    columns = info_titles + ['Tổng điểm', 'Đối kháng']
+    columns = info_titles + ['Tổng điểm', 'Đối kháng', 'Tim']   # NEW
+
 
     # 1) Xác định Vòng “Chung Kết” (nếu không tìm được thì lấy tất cả vòng của CT này)
     vt_ck = VongThi.objects.filter(cuocThi=ct, tenVongThi__iexact="Chung Kết")
@@ -355,8 +356,19 @@ def _final_columns_and_rows(ct: CuocThi):
     stars_by_ma = {r["entry__thiSinh__maNV"]: (float(r["avg"]) if r["avg"] is not None else None)
                    for r in battle_qs}
 
+    # NEW: đếm số "Tim" (♥) theo thí sinh trong CK
+    from django.db.models import Case, When, IntegerField, Sum
+    heart_qs = (
+        BattleVote.objects
+        .filter(entry__pair__cuocThi=ct)
+        .values("entry__thiSinh__maNV")
+        .annotate(hearts=Sum(Case(When(heart=True, then=1), default=0, output_field=IntegerField())))
+    )
+    hearts_by_ma = {r["entry__thiSinh__maNV"]: int(r["hearts"] or 0) for r in heart_qs}
+
     # 5) Duyệt thí sinh của CT & build rows
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
+
     def _sv(x): return "" if x is None else str(x)
 
     rows = []
@@ -364,6 +376,7 @@ def _final_columns_and_rows(ct: CuocThi):
         tong = round(total_by_ma.get(ts.maNV, 0.0), 2)
         sao = stars_by_ma.get(ts.maNV, None)
         sao_fmt = (f"{sao:.1f}" if sao is not None else "")
+        tim = hearts_by_ma.get(ts.maNV, 0)  # NEW
 
         row = [
             idx,
@@ -376,6 +389,7 @@ def _final_columns_and_rows(ct: CuocThi):
             _sv(getattr(ts, "email", "")),
             tong,
             sao_fmt,
+            tim,
         ]
         rows.append(row)
 

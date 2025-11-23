@@ -453,8 +453,8 @@ def submit_vote(request):
     if request.method != "POST":
         return HttpResponseBadRequest("Method not allowed")
 
-    if not request.user.is_authenticated:
-        return JsonResponse({"ok": False, "error": "Bạn chưa đăng nhập."}, status=401)
+    # if not request.user.is_authenticated:
+    #     return JsonResponse({"ok": False, "error": "Bạn chưa đăng nhập."}, status=401)
 
     # Parse JSON
     try:
@@ -467,7 +467,7 @@ def submit_vote(request):
     side = body.get("side")
     stars = body.get("stars")
     note = (body.get("note") or "").strip()
-
+    heart   = bool(body.get("heart"))   # NEW: nhận tim
     # Validate cơ bản
     if not pair_id or not maNV or side not in ("L", "R"):
         return HttpResponseBadRequest("Thiếu pair_id / maNV / side")
@@ -480,14 +480,45 @@ def submit_vote(request):
     if stars < 1 or stars > 5:
         return HttpResponseBadRequest("stars phải từ 1 đến 5")
 
-    # Tìm giám khảo tương ứng với tài khoản đang đăng nhập
+    # Lấy judge nhận diện từ session/user như cũ
     judge = _current_judge(request)
 
-    if not judge:
+
+    # Siết điều kiện: phải là đúng BGD (token) và đồng thời có bản ghi Giám khảo
+    is_bgd_and_bgk = _is_bgd_session(request) and _bgd_session_belongs_to_judge(request, judge)
+
+    user = getattr(request, "user", None)
+    is_admin_user = bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
+    is_admin_judge = bool(judge and getattr(judge, "role", "") == "ADMIN")
+
+    # Cho phép nếu:
+    #  - BGD & BGK (đúng token),
+    #  - ADMIN & BGK,
+    #  - hoặc chỉ ADMIN (không cần judge)
+    if not (is_bgd_and_bgk or (is_admin_user and judge) or is_admin_judge or is_admin_user):
         return JsonResponse(
-            {"ok": False, "error": "Không tìm thấy thông tin giám khảo cho tài khoản hiện tại."},
-            status=403
+            {"ok": False, "error": "Bạn không có quyền vote. Chỉ BGD&BGK, ADMIN&BGK, hoặc ADMIN."},
+            status=403,
         )
+
+
+    user = getattr(request, "user", None)
+    is_admin_user = bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
+    is_admin_judge = bool(judge and getattr(judge, "role", "") == "ADMIN")
+
+    # Cho phép nếu:
+    #  - BGD & BGK, hoặc
+    #  - ADMIN & BGK, hoặc
+    #  - Chỉ ADMIN (không cần judge)
+    if not (is_bgd_and_bgk or (is_admin_user and judge) or is_admin_judge or is_admin_user):
+        return JsonResponse(
+            {
+                "ok": False,
+                "error": "Bạn không có quyền vote. Chỉ BGD&BGK, ADMIN&BGK, hoặc ADMIN mới được phép.",
+            },
+            status=403,
+        )
+
 
     # Tìm entry (ThiSinhCapThiDau) theo pair + thí sinh + side
     try:
@@ -508,6 +539,7 @@ def submit_vote(request):
         defaults={
             "stars": stars,
             "note": note,
+             "heart": heart,
         },
     )
 
@@ -520,6 +552,7 @@ def submit_vote(request):
         "created": created,
         "stars": vote.stars,
         "note": vote.note,
+         "heart": heart,
         "total_votes": total_votes,
         "avg_stars": avg_stars,
         "entry": {
@@ -527,8 +560,26 @@ def submit_vote(request):
             "maNV": entry.thiSinh.maNV,
             "side": entry.side,
         },
-        "giamKhao": {
-            "maNV": judge.maNV,
-            "hoTen": judge.hoTen,
-        }
+        "giamKhao": (
+            {"maNV": judge.maNV, "hoTen": judge.hoTen}
+            if judge else
+            {"maNV": None, "hoTen": "ADMIN"}
+        )
     })
+def _is_bgd_session(request):
+    """Phiên do BGD mở từ QR (score/battle)."""
+    mode = request.session.get("bgd_mode")
+    has_token = bool(request.session.get("bgd_token"))
+    return has_token and mode in ("battle", "score")
+
+def _bgd_session_belongs_to_judge(request, judge):
+    """
+    Chỉ coi là 'BGD & BGK' khi phiên có bgd_token và judge hiện tại
+    CHÍNH LÀ BGD đó (maNV == maBGD). Tránh lợi dụng cờ bgd_mode còn sót.
+    """
+    tok = request.session.get("bgd_token")
+    if not (tok and judge):
+        return False
+    from .models import BanGiamDoc
+    bgd = BanGiamDoc.objects.filter(token=tok).only("maBGD").first()
+    return bool(bgd and str(judge.maNV) == str(bgd.maBGD))

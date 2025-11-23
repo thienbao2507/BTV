@@ -14,6 +14,16 @@ def _score_type(bt) -> str:
 
 def ranking_view(request):
     ct_id = request.GET.get("ct")
+    # ===== Lọc theo tên & đơn vị (dùng nút trượt) =====
+    ten = (request.GET.get("ten") or "").strip()
+    don_vi = (request.GET.get("don_vi") or "").strip()
+    use_filter = request.GET.get("use_filter") == "1"
+    # ten / don_vi luôn giữ để hiển thị lại trong ô input
+    # chỉ khi use_filter = True mới áp vào query
+    # ================================================
+
+    # ================================
+
     cuoc_this = CuocThi.objects.filter(trangThai=True).order_by("-id")
 
     if not cuoc_this.exists():
@@ -21,7 +31,11 @@ def ranking_view(request):
             "cuoc_this": cuoc_this, "selected_ct": None,
             "groups": [], "rows": [], "total_max": 0,
             "title": "Xếp hạng theo Cuộc thi",
+            "filter_name": ten,
+            "filter_unit": don_vi,
+            "is_filtered": False,
         })
+
 
     selected_ct = cuoc_this.filter(id=ct_id).first() if ct_id else None
     if selected_ct is None:
@@ -109,14 +123,15 @@ def ranking_view(request):
     # 4) Thí sinh
     ts_m2m = ThiSinh.objects.filter(cuocThi=selected_ct)
     ts_scored = ThiSinh.objects.filter(phieuchamdiem__cuocThi=selected_ct)
-    ts_qs = (
+    ts_qs_base = (
         ThiSinh.objects
         .filter(Q(pk__in=ts_m2m.values("pk")) | Q(pk__in=ts_scored.values("pk")))
         .distinct().order_by("maNV")
     )
 
-    rows = []
-    for ts in ts_qs:
+    # 4.1. Tạo LIST đầy đủ cho tất cả thí sinh (không lọc)
+    rows_all = []
+    for ts in ts_qs_base:
         groups_view = []
         total_sum = 0.0
         for g in groups:
@@ -131,7 +146,7 @@ def ranking_view(request):
 
         done = done_count_map.get(ts.maNV, 0)
 
-        rows.append({
+        rows_all.append({
             "maNV": ts.maNV,
             "hoTen": ts.hoTen,
             "donVi": ts.donVi or "",
@@ -149,7 +164,33 @@ def ranking_view(request):
         t_key = t if t is not None else float("inf")
         return (-total, t_key, r["maNV"])
 
-    rows.sort(key=_row_sort_key)
+    rows_all.sort(key=_row_sort_key)
+
+    # 4.2. Gán RANK GLOBAL cho toàn bộ list
+    for idx, r in enumerate(rows_all, start=1):
+        r["rank"] = idx
+
+    # 4.3. Áp điều kiện lọc TRÊN LIST (không thay đổi rank)
+    ten_filter = ten if use_filter else ""
+    don_vi_filter = don_vi if use_filter else ""
+
+    if use_filter and (ten_filter or don_vi_filter):
+        lf = ten_filter.lower()
+        lu = don_vi_filter.lower()
+
+        def _match(row):
+            ok = True
+            if lf:
+                ok = ok and (lf in (row["hoTen"] or "").lower())
+            if lu:
+                ok = ok and (lu in (row["donVi"] or "").lower())
+            return ok
+
+        rows = [r for r in rows_all if _match(r)]
+        is_filtered = True
+    else:
+        rows = rows_all
+        is_filtered = False
 
     return render(request, "ranking/index.html", {
         "cuoc_this": cuoc_this,
@@ -158,6 +199,10 @@ def ranking_view(request):
         "rows": rows,
         "total_max": total_max,
         "title": f"Xếp hạng — {selected_ct.ma} · {selected_ct.tenCuocThi}",
+        "filter_name": ten,
+        "filter_unit": don_vi,
+        "is_filtered": is_filtered,
     })
+
 
 

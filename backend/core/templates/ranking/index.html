@@ -75,7 +75,8 @@
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
-
+.rank-table thead th.vt-group {
+    font-size: 14px; }
 
 
             .rank-table th,
@@ -85,12 +86,24 @@
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
+        /* Cho tên bài thi / tiêu đề vòng được xuống dòng */
+        .rank-table thead th.col-test,
+        .rank-table thead th.col-group-total {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.3;
+            font-size: 14px;
+        }
 
-            th.col-rank,
-            td.col-rank {
-                width: 56px;
-                text-align: center;
-            }
+        .rank-table thead th.col-test > div,
+        .rank-table thead th.col-group-total > div {
+            white-space: normal;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+
 
             /* cột bài thi ở giữa: rộng hơn để đọc rõ tên vòng/đề */
             th.col-test,
@@ -360,13 +373,14 @@ td.num { font-weight: 600; }
 
         th.col-rank,
         td.col-rank {
-            width: 38px;
+            width: 40px;
+                max-width: 40px;
             text-align: center;
         }
         .rank-table thead th:nth-child(2),
         .rank-table tbody td:nth-child(2) {
-            width: 100px;
-            max-width: 100px;   /* tránh bị rule khác ép rộng hơn */
+            width: 80px;
+            max-width: 80px;   /* tránh bị rule khác ép rộng hơn */
             text-align: center;
         }
         /* Họ tên rộng hơn */
@@ -376,6 +390,19 @@ td.num { font-weight: 600; }
             max-width: 200px;
         }
 
+        /* Đơn vị: cố định như các cột mã / họ tên */
+        .rank-table thead th:nth-child(4),
+        .rank-table tbody td:nth-child(4) {
+            width: 70px;      /* chỉnh 200–260 tùy layout */
+            max-width: 70px;
+        }
+        /* Tổng điểm: chỉnh chiều rộng cột Tổng */
+.rank-table thead th.col-total,
+.rank-table tbody td.col-total {
+    width: 70px;    /* chỉnh theo ý: 80, 100, 140... */
+    max-width: 70px;
+    text-align: center;     /* hoặc center nếu bạn muốn */
+}
 
         .page-indicator {
             margin-top: 10px;
@@ -418,13 +445,103 @@ td.num { font-weight: 600; }
 .rank-table thead th.col-done,
 .rank-table tbody td.col-done {
   background: rgba(148, 163, 184, 0.22);  /* sáng hơn xung quanh một chút */
-  width: 120px;
+  width: 80px;
 }
-
+/* Cho "Đã hoàn thành" được xuống dòng khi cột hẹp */
+.rank-table thead th.col-done {
+  white-space: normal;      /* cho phép xuống dòng */
+  overflow: visible;        /* không cắt chữ */
+  text-overflow: clip;      /* bỏ dấu ... */
+  line-height: 1.3;
+  word-wrap: break-word;
+  word-break: break-word;
+}
 .rank-table tbody td.col-done {
   text-align: center !important;
   font-weight: 700;
 }
+        input[type="text"]{
+            background: #111827;
+            color: var(--fg);
+            border: 1px solid #263040;
+            border-radius: 10px;
+            padding: 8px 10px;
+            min-width: 180px;
+            outline: none;
+            transition: border-color .15s ease, box-shadow .15s ease;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset;
+        }
+        input[type="text"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, .2);
+        }
+
+        .filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .filter-toggle-label {
+            font-weight: 500;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #1f2937;
+            border-radius: 999px;
+            border: 1px solid #4b5563;
+            transition: background .15s ease, border-color .15s ease;
+        }
+
+        .slider-toggle::before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #9ca3af;
+            border-radius: 50%;
+            transition: transform .15s ease, background .15s ease;
+        }
+
+        .switch input:checked + .slider-toggle {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-color: #3b82f6;
+        }
+
+        .switch input:checked + .slider-toggle::before {
+            transform: translate(19px, -50%);
+            background: #fff;
+        }
+
+        .filter-toggle-state {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, .15);
+            color: #e5e7eb;
+        }
 
 
     </style>
@@ -448,16 +565,46 @@ td.num { font-weight: 600; }
 
 
         <section class="panel">
-            <form method="get" class="controls">
+            <form method="get" class="controls" id="filterForm">
                 <label>Chọn cuộc thi:</label>
-                <select name="ct" onchange="this.form.submit()">
+                <select name="ct" onchange="document.getElementById('filterForm').submit()">
                     {% for ct in cuoc_this %}
                     <option value="{{ ct.id }}" {% if selected_ct and ct.id == selected_ct.id %}selected{% endif %}>
                         {{ ct.ma }} — {{ ct.tenCuocThi }}
                     </option>
                     {% endfor %}
                 </select>
+
+                <label for="filterTen">Tên:</label>
+                <input type="text"
+                       id="filterTen"
+                       name="ten"
+                       placeholder="Nhập họ tên"
+                       value="{{ filter_name|default_if_none:'' }}">
+
+                <label for="filterDonVi">Đơn vị:</label>
+                <input type="text"
+                       id="filterDonVi"
+                       name="don_vi"
+                       placeholder="Nhập đơn vị"
+                       value="{{ filter_unit|default_if_none:'' }}">
+
+                <div class="filter-toggle">
+                    <span class="filter-toggle-label">Lọc theo Tên / Đơn vị</span>
+                    <label class="switch">
+                        <input type="checkbox"
+                               name="use_filter"
+                               value="1"
+                               {% if is_filtered %}checked{% endif %}
+                               onchange="document.getElementById('filterForm').submit()">
+                        <span class="slider-toggle"></span>
+                    </label>
+                    <span class="filter-toggle-state">
+                        {% if is_filtered %}Đang lọc{% else %}Tắt lọc{% endif %}
+                    </span>
+                </div>
             </form>
+
 
             {% if not selected_ct %}
             <p class="subtitle">Chưa có cuộc thi nào.</p>
@@ -471,12 +618,16 @@ td.num { font-weight: 600; }
 
             <div class="table-wrap">
                 <!-- thêm data-col-group-size để config số cột bài thi/nhóm -->
-                <table class="rank-table" id="rankTable" data-page-size="10" data-interval-ms="5000"
-                    data-col-group-size="5">
+            <table class="rank-table"
+                id="rankTable"
+                data-page-size="10"
+                data-interval-ms="5000"
+                data-col-group-size="5"
+                data-filtered="{{ is_filtered|yesno:'1,0' }}">
 <thead>
   <!-- Hàng 1: Vòng thi (gộp 4 cột cố định + Đã chấm + Tổng, đều rowspan=2) -->
 <tr id="vtRow">
-  <th class="col-rank" rowspan="2">STT</th>
+  <th class="col-rank" rowspan="2">Rank</th>
   <th rowspan="2">Mã NV</th>
   <th rowspan="2">Họ tên</th>
   <th rowspan="2">Đơn vị</th>
@@ -495,7 +646,7 @@ td.num { font-weight: 600; }
   {% endfor %}
 
   <!-- Cột Tổng điểm -->
-  <th rowspan="2">Tổng</th>
+<th rowspan="2" class="col-total">Tổng</th>
 </tr>
 
   <!-- Hàng 2 giữ nguyên như cũ -->
@@ -517,11 +668,12 @@ td.num { font-weight: 600; }
 
 <tbody id="rankBody">
 {% for r in rows %}
-<tr class="{% if forloop.counter <= 3 %}rank-{{ forloop.counter }} top--{{ forloop.counter }}{% endif %}">
-  <td class="col-rank">{{ forloop.counter }}</td>
+<tr class="{% if r.rank <= 3 %}rank-{{ r.rank }} top--{{ r.rank }}{% endif %}">
+  <td class="col-rank">{{ r.rank }}</td>
   <td>{{ r.maNV }}</td>
   <td>{{ r.hoTen }}</td>
   <td>{{ r.donVi }}</td>
+
 
   <!-- Đưa cột đã hoàn thành lên đây -->
   <td class="num col-done">
@@ -538,7 +690,8 @@ td.num { font-weight: 600; }
   {% endfor %}
 
   <!-- Tổng điểm -->
-  <td class="total num">{{ r.total|floatformat:0 }}</td>
+  <td class="total num col-total">{{ r.total|floatformat:0 }}</td>
+
 </tr>
 
 {% endfor %}

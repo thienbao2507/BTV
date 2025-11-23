@@ -6,6 +6,27 @@
 
 {% block head_extra %}
   <style>
+/* === Heart toggle (♥) === */
+.heart-icon{
+  font-size:20px;
+  line-height:1;
+  color:#9ca3af; /* xám nhạt khi chưa chọn */
+  filter: grayscale(100%) brightness(0.9);
+  opacity:.55;
+  transition: filter .15s ease, opacity .15s ease, transform .12s ease, color .15s ease, text-shadow .15s ease;
+}
+
+.heart-btn.active .heart-icon{
+  filter:none;
+  opacity:1;
+  transform: scale(1.05);
+  color:#ec4899; /* hồng */
+  text-shadow:
+    0 0 6px rgba(236,72,153,0.9),
+    0 0 14px rgba(236,72,153,0.7);
+}
+
+
     .battle-wrap{
       min-height: calc(100vh - 120px);
       display:flex; align-items:center; justify-content:center;
@@ -559,12 +580,17 @@
         <div class="vote-info-id" id="voteInfoId" style="font-size:12px;opacity:.8;">---</div>
       </div>
 
-      <div class="vote-stars">
-        <div class="vote-stars-label">Đánh giá (tối đa 5 sao):</div>
-        <div class="vote-stars-row" id="voteStarsRow">
-          <!-- JS sẽ render 5 sao ở đây -->
-        </div>
-      </div>
+<div class="vote-stars">
+  <div class="vote-stars-head">
+    <div class="vote-stars-label">Đánh giá (tối đa 5 sao):</div>
+  </div>
+
+  <div class="vote-stars-row" id="voteStarsRow">
+    <!-- JS sẽ render 5 sao + trái tim ở đây -->
+  </div>
+</div>
+
+
 
       <div class="vote-note">
         <label for="voteNote">Ghi chú (không bắt buộc)</label>
@@ -595,8 +621,12 @@
 
     const voteInfoName = $("voteInfoName");
     const voteInfoId   = $("voteInfoId");
-    const voteStarsRow = $("voteStarsRow");
-    const voteNote     = $("voteNote");
+const voteStarsRow = $("voteStarsRow");
+const voteNote     = $("voteNote");
+
+let voteHeartOn = false;   // trạng thái tim (true/false)
+let voteHeartBtn = null;   // DOM button của tim
+
 
     let state = {
       pairs: [],
@@ -639,35 +669,66 @@
     }
 
     // --- Vote sao trong popup ---
-    function renderStars(){
-      // tạo 5 nút sao nếu chưa có
-      voteStarsRow.innerHTML = "";
-      for (let i = 1; i <= 5; i++){
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "star-btn";
-        btn.dataset.value = String(i);
+function renderStars(){
+  // tạo 5 nút sao
+  voteStarsRow.innerHTML = "";
+  for (let i = 1; i <= 5; i++){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "star-btn";
+    btn.dataset.value = String(i);
 
-        const img = document.createElement("img");
-        img.src = STAR_IMG_URL;
-        img.alt = i + " sao";
-        img.className = "star-icon";
+    const img = document.createElement("img");
+    img.src = STAR_IMG_URL;
+    img.alt = i + " sao";
+    img.className = "star-icon";
 
-        btn.appendChild(img);
-        voteStarsRow.appendChild(btn);
-      }
+    btn.appendChild(img);
+    voteStarsRow.appendChild(btn);
+  }
 
-      // gắn sự kiện click
-      voteStarsRow.querySelectorAll(".star-btn").forEach(btn=>{
-        btn.addEventListener("click", ()=>{
-          const value = parseInt(btn.dataset.value || "0", 10) || 0;
-          state.voteRating = value;
-          updateStarActive();
-        });
-      });
-
+  // gắn sự kiện click cho sao
+  voteStarsRow.querySelectorAll(".star-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const value = parseInt(btn.dataset.value || "0", 10) || 0;
+      state.voteRating = value;
       updateStarActive();
-    }
+    });
+  });
+
+  // === Thêm nút trái tim ngay sau sao thứ 5 ===
+  voteHeartOn = false;
+  const heartBtn = document.createElement("button");
+  heartBtn.type = "button";
+  heartBtn.className = "heart-btn";
+  heartBtn.id = "voteHeartBtn";
+
+  const heartSpan = document.createElement("span");
+  heartSpan.className = "heart-icon";
+  heartSpan.textContent = "♥";
+
+  heartBtn.appendChild(heartSpan);
+  voteStarsRow.appendChild(heartBtn);
+
+  voteHeartBtn = heartBtn;
+
+  heartBtn.addEventListener("click", ()=>{
+    voteHeartOn = !voteHeartOn;
+    updateHeartActive();
+  });
+
+  updateStarActive();
+  updateHeartActive();
+}
+function updateHeartActive(){
+  if (!voteHeartBtn) return;
+  if (voteHeartOn){
+    voteHeartBtn.classList.add("active");
+  } else {
+    voteHeartBtn.classList.remove("active");
+  }
+}
+
 
     function updateStarActive(){
       const current = state.voteRating || 0;
@@ -768,13 +829,17 @@
           voteInfoName.textContent = name || "---";
           voteInfoId.textContent = manv ? `Mã NV: ${manv} — Cặp: ${pairCode || ""}` : "";
 
-          // reset rating & note mỗi lần mở popup
-          state.voteRating = 0;
-          state.voteNote = "";
-          voteNote.value = "";
-          updateStarActive();
+// reset rating & note mỗi lần mở popup
+state.voteRating = 0;
+state.voteNote = "";
+voteNote.value = "";
 
-          voteModal.classList.add("show");
+voteHeartOn = false;
+updateStarActive();
+updateHeartActive();
+
+voteModal.classList.add("show");
+
         });
       });
     }
@@ -827,14 +892,15 @@
 
       state.voteNote = voteNote.value || "";
 
-      const payload = {
-        pair_id: state.currentFighter.pairId,
-        maNV: state.currentFighter.manv,
-        side: state.currentFighter.side,
-        stars: state.voteRating,
-        note: state.voteNote,
-        
-      };
+const payload = {
+  pair_id: state.currentFighter.pairId,
+  maNV: state.currentFighter.manv,
+  side: state.currentFighter.side,
+  stars: state.voteRating,
+  note: state.voteNote,
+  heart: !!voteHeartOn
+};
+
 
       fetch("/battle/vote", {
         method: "POST",
