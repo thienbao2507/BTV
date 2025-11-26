@@ -4,7 +4,6 @@ import unicodedata
 import re          
 from io import TextIOWrapper
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect
 from django.db import transaction
 from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
@@ -13,6 +12,10 @@ from django.db.models import Prefetch
 from .models import BaiThi, BaiThiTemplateSection, BaiThiTemplateItem, VongThi
 from .models import ThiSinh, GiamKhao, CuocThi, ThiSinhCuocThi
 from core.decorators import judge_required
+
+import os
+from django.conf import settings
+from django.core.files.storage import default_storage
 
 REQUIRED_COLUMNS = {
     "thisinh": ["maNV", "hoTen", "chiNhanh", "vung", "donVi", "email", "nhom", "image_url"],
@@ -239,6 +242,88 @@ def import_view(request):
         }
         
 )
+
+@judge_required
+def upload_avatars_view(request):
+    """
+    Trang upload nhiều ảnh avatar.
+    - Tên file = maNV (không cần phân biệt hoa/thường), ví dụ: NV001.jpg
+    - Lưu vào MEDIA_ROOT/thisinh/maNV.jpg
+    - Tự động cập nhật ThiSinh.image_url tương ứng.
+    """
+    if request.method == "POST":
+        files = request.FILES.getlist("images")
+        if not files:
+            messages.error(request, "Vui lòng chọn ít nhất 1 ảnh.")
+            return redirect(request.path)
+
+        updated = 0
+        not_found = []
+        skipped = 0
+
+        for f in files:
+            original_name = f.name or ""
+            base_name = os.path.basename(original_name)
+            stem, ext = os.path.splitext(base_name)
+
+            ma = (stem or "").strip()
+            ext = ext.lower()
+
+            # Chỉ nhận jpg/jpeg/png
+            if ext not in [".jpg", ".jpeg", ".png"]:
+                skipped += 1
+                continue
+            if not ma:
+                skipped += 1
+                continue
+
+            # Tìm thí sinh theo maNV (không phân biệt hoa/thường)
+            try:
+                ts = ThiSinh.objects.get(maNV__iexact=ma)
+            except ThiSinh.DoesNotExist:
+                not_found.append(ma)
+                continue
+
+            # Đặt lại tên file chuẩn theo maNV trong DB (giữ nguyên hoa/thường trong DB)
+            filename = f"{ts.maNV}{ext}"
+            upload_path = os.path.join("thisinh", filename)
+
+            # Nếu đã có file cũ, có thể xóa đi (tuỳ nhu cầu)
+            if default_storage.exists(upload_path):
+                default_storage.delete(upload_path)
+
+            # Lưu file mới
+            saved_path = default_storage.save(upload_path, f)
+
+            # Lấy URL để lưu vào image_url
+            try:
+                url = default_storage.url(saved_path)
+            except Exception:
+                # fallback: MEDIA_URL + path
+                url = settings.MEDIA_URL + saved_path
+
+            ts.image_url = url
+            ts.save(update_fields=["image_url"])
+            updated += 1
+
+        if updated:
+            messages.success(request, f"Đã cập nhật ảnh cho {updated} thí sinh.")
+        if skipped:
+            messages.warning(
+                request,
+                f"Bỏ qua {skipped} file không hợp lệ (không đúng định dạng jpg/png hoặc không có mã)."
+            )
+        if not_found:
+            messages.warning(
+                request,
+                "Không tìm thấy thí sinh cho các mã: " + ", ".join(sorted(set(not_found)))
+            )
+
+        return redirect(request.path)
+
+    # GET: render trang upload
+    return render(request, "importer/upload_avatars.html", {})
+
 
 
 def organize_view(request):

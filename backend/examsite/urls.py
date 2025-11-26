@@ -25,7 +25,7 @@ from core.views_management import management_view
 from core.views_export import export_page, export_xlsx
 from django.urls import path, include
 from core import views_score
-from core.views_admin import import_view
+from core.views_admin import import_view, upload_avatars_view
 from core.views_bgd import bgd_qr_index, bgd_qr_png, bgd_go, bgd_battle_go, score_bgd_view, bgd_qr_zip_all, bgd_list  # ADD
 from core.views_battle import battle_view, manage_battle_view, save_pairing, pairing_state, submit_vote, delete_pair
 from core.views_export import export_page, export_xlsx, export_final_page, export_final_xlsx
@@ -64,8 +64,9 @@ urlpatterns = [
     path("battle/pairing/state", pairing_state, name="battle-pairing-state"),
     path("battle/pairing/delete", delete_pair, name="battle-pairing-delete"),
     path("battle/vote", submit_vote, name="battle_submit_vote"),
-        path("export-final", export_final_page, name="export-final-page"),
+    path("export-final", export_final_page, name="export-final-page"),
     path("export-final-xlsx", export_final_xlsx, name="export-final-xlsx"),
+    path("upload-avatars/", upload_avatars_view, name="upload-avatars"),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
