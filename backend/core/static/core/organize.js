@@ -28,11 +28,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (maxLabel) maxLabel.style.display = 'none';
         if (maxInput) { maxInput.style.display = 'none'; maxInput.required = false; maxInput.value = ''; }
       }
-      if (fileTemplate) {
-        fileTemplate.style.display = (sel.value === 'TEMPLATE') ? '' : 'none';
-      } else {
-        fileTemplate.style.display = 'none';
-      }
+if (fileTemplate) {
+  fileTemplate.style.display = (sel.value === 'TEMPLATE') ? '' : 'none';
+}
+
     }
     sel.addEventListener('change', sync);
     sync();
@@ -818,6 +817,41 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   })();
+// ===== Đổi tên VÒNG THI: tự bật popup khi rời input (sự kiện change) =====
+(function initRenameVTConfirm() {
+  if (typeof window.openConfirm !== 'function') return;
+
+  document.querySelectorAll('form.js-rename-vt-form input[name="tenVongThi"]').forEach((input) => {
+    const form = input.closest('form.js-rename-vt-form');
+    if (!form) return;
+
+    let lastConfirmed = (input.dataset.init || input.value || '').trim();
+
+    input.addEventListener('change', () => {
+      const now = (input.value || '').trim();
+
+      // Không đổi hoặc người dùng xoá trắng -> trả về giá trị đã xác nhận
+      if (!now || now === lastConfirmed) {
+        input.value = lastConfirmed;
+        return;
+      }
+
+      const msg = `Bạn có muốn đổi tên vòng thi:\n“${lastConfirmed}” → “${now}”?`;
+      openConfirm(
+        msg,
+        // OK -> submit form rename_vt
+        () => {
+          lastConfirmed = now;
+          form.submit();
+        },
+        // Cancel -> khôi phục
+        () => {
+          input.value = lastConfirmed;
+        }
+      );
+    });
+  });
+})();
 
   // === Thu gọn / mở rộng Vòng thi ===
   (function initToggleVT() {

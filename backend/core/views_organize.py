@@ -67,6 +67,36 @@ def organize_view(request, ct_id=None):
                 return redirect(request.path)
 
             # --------------------------------------------------
+            # Đổi tên vòng thi
+            # --------------------------------------------------
+            if action == "rename_vt":
+                vt_id = request.POST.get("vongThi_id")
+                new_name = (request.POST.get("tenVongThi") or "").strip()
+
+                if not vt_id:
+                    messages.error(request, "Thiếu ID vòng thi.")
+                    return redirect(request.path)
+
+                try:
+                    vt = VongThi.objects.get(id=vt_id)
+                except VongThi.DoesNotExist:
+                    messages.error(request, "Vòng thi không tồn tại.")
+                    return redirect(request.path)
+
+                if not new_name:
+                    messages.error(request, "Tên vòng thi không được để trống.")
+                    return redirect(request.path)
+
+                old_name = vt.tenVongThi
+                vt.tenVongThi = new_name
+                vt.save(update_fields=["tenVongThi"])
+
+                messages.success(
+                    request,
+                    f"Đã đổi tên vòng thi “{old_name}” → “{new_name}”."
+                )
+                return redirect(request.path)
+            # --------------------------------------------------
             # Tạo bài thi
             # --------------------------------------------------
             if action == "create_bt":
@@ -484,7 +514,10 @@ def organize_view(request, ct_id=None):
                 with transaction.atomic():
                     # remove
                     if to_remove:
-                        GiamKhaoBaiThi.objects.filter(baiThi=bt, giamKhao_id__in=list(to_remove)).delete()
+                        GiamKhaoBaiThi.objects.filter(
+                            baiThi=bt,
+                            giamKhao__maNV__in=list(to_remove)
+                        ).delete()
                     # add (only if giamkhao exists)
                     for ma in to_add:
                         try:

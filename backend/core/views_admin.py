@@ -122,6 +122,34 @@ def _read_csv(file, expected_cols):
             out[c] = (row.get(src, "") or "").strip()
         data.append(out)
     return data
+def _find_duplicate_ma_email(rows, key_ma="maNV", key_email="email"):
+    """
+    rows: list[dict] đọc từ file import
+    Trả về:
+      - dup_ma: set các mã NV trùng trong file
+      - dup_email: set các email trùng trong file
+    """
+    seen_ma = set()
+    seen_email = set()
+    dup_ma = set()
+    dup_email = set()
+
+    for r in rows:
+        ma = (r.get(key_ma) or "").strip()
+        if ma:
+            if ma in seen_ma:
+                dup_ma.add(ma)
+            else:
+                seen_ma.add(ma)
+
+        email = (r.get(key_email) or "").strip().lower()
+        if email:
+            if email in seen_email:
+                dup_email.add(email)
+            else:
+                seen_email.add(email)
+
+    return dup_ma, dup_email
 
 @judge_required
 def import_view(request):
@@ -163,6 +191,26 @@ def import_view(request):
         except Exception as e:
             messages.error(request, f"Lỗi đọc tệp: {e}")
             return redirect(request.path)
+
+        # 🔴 NEW: kiểm tra trùng mã / email trong file
+        dup_ma, dup_email = _find_duplicate_ma_email(rows)
+        if dup_ma or dup_email:
+            # tên loại dữ liệu để hiện cho dễ hiểu
+            loai = "thí sinh" if target == "thisinh" else "giám khảo"
+            parts = []
+            if dup_ma:
+                parts.append("Mã nhân viên trùng: " + ", ".join(sorted(dup_ma)))
+            if dup_email:
+                parts.append("Email trùng: " + ", ".join(sorted(dup_email)))
+
+            if cuocthi_obj:
+                prefix = f"Không thể import {loai} vào cuộc thi {cuocthi_obj.ma} vì tệp có nhiều dòng trùng nhau. "
+            else:
+                prefix = f"Không thể import {loai} vì tệp có nhiều dòng trùng nhau. "
+
+            messages.error(request, prefix + " | ".join(parts))
+            return redirect(request.path)
+        # 🔴 Hết phần check trùng
 
         created = updated = skipped = 0
         with transaction.atomic():

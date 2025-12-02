@@ -485,6 +485,36 @@
     max-height: 100%;
     overflow: auto;
     }
+    /* Modal xác nhận nhỏ (dùng chung với competitions) */
+    .modal {
+        background:#020617;
+        border-radius:14px;
+        border:1px solid #1e293b;
+        padding:16px 18px;
+        width:380px;
+        max-width:95vw;
+        box-shadow:0 18px 45px rgba(0,0,0,.6);
+    }
+    .modal h4{
+        margin:0 0 8px;
+        font-size:16px;
+        font-weight:600;
+        color:#e5e7eb;
+    }
+    .modal p{
+        margin:0 0 14px;
+        font-size:14px;
+        color:#cbd5e1;
+        white-space:pre-line; /* để xuống dòng \n trong message */
+    }
+    .modal-actions{
+        display:flex;
+        justify-content:flex-end;
+        gap:8px;
+    }
+    .modal-actions .btn{
+        margin-left:0;
+    }
 
     /* (tuỳ chọn) các modal khác cũng nên có giới hạn tương tự */
     #time-modal > div,
@@ -630,42 +660,65 @@
                         <button class="btn" type="submit">Thêm vòng</button>
                     </form>
 
-                    {% for vt in ct.vong_thi.all %}
-                        <div class="vt">
+{% for vt in ct.vong_thi.all %}
+    <div class="vt">
 
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div style="font-weight:600;">
-                                    {{ vt.tenVongThi }}
-                                </div>
+        <!-- HEADER VÒNG THI: tên = input + nút Lưu + nút xóa/thu gọn -->
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
 
-                                <div class="vt-controls">
-                                    <!-- Xóa vòng thi -->
-                                    <button type="button"
-                                            class="vt-icon-btn"
-                                            title="Xóa vòng thi"
-                                            data-delete-vt
-                                            data-vtid="{{ vt.id }}"
-                                            data-vtname="{{ vt.tenVongThi }}">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg>
-                                    </button>
+<!-- Form đổi tên vòng thi (auto-popup, không cần nút Lưu) -->
+<form method="post"
+      class="js-rename-vt-form"
+      style="display:flex; align-items:center; gap:8px; margin:0;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="rename_vt">
+    <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
 
-                                    <!-- Ẩn / hiện -->
-                                    <button type="button"
-                                            class="vt-icon-btn"
-                                            title="Ẩn/hiện vòng thi"
-                                            data-vt-toggle="{{ vt.id }}">
-                                        <svg class="vt-chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="vt-body" data-vt-body="{{ vt.id }}" style="margin-top:8px;">
+    <input type="text"
+           name="tenVongThi"
+           value="{{ vt.tenVongThi }}"
+           data-init="{{ vt.tenVongThi|escapejs }}"
+           style="background:#0b122072;
+                  color:#e5e7eb;
+                  border:1px solid #243045;
+                  border-radius:8px;
+                  padding:6px 10px;
+                  min-width:220px;
+                  font-weight:600;">
+</form>
+
+
+            <!-- Ô chứa 2 nút icon (xóa / ẩn-hiện) giữ nguyên để JS dùng -->
+            <div class="vt-controls">
+                <!-- Xóa vòng thi -->
+                <button type="button"
+                        class="vt-icon-btn"
+                        title="Xóa vòng thi"
+                        data-delete-vt
+                        data-vtid="{{ vt.id }}"
+                        data-vtname="{{ vt.tenVongThi }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+
+                <!-- Ẩn / hiện -->
+                <button type="button"
+                        class="vt-icon-btn"
+                        title="Ẩn/hiện vòng thi"
+                        data-vt-toggle="{{ vt.id }}">
+                    <svg class="vt-chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- BODY VÒNG THI GIỮ NGUYÊN -->
+        <div class="vt-body" data-vt-body="{{ vt.id }}" style="margin-top:8px;">
 
                                 <!-- Form thêm Bài thi cho Vòng này -->
                                 <form method="post" class="row" style="margin-top:8px;align-items:center;gap:10px">
@@ -1125,6 +1178,28 @@
               class="btn"
               type="button"
               style="background:#dc2626; color:#fff;">
+        Đồng ý
+      </button>
+    </div>
+  </div>
+</div>
+<!-- MODAL XÁC NHẬN ĐỔI TÊN (dùng chung openConfirm trong organize.js) -->
+<div id="confirmModal"
+     class="modal-overlay"
+     style="display:none; position:fixed; inset:0; background:#0008; z-index:2100;">
+  <div class="modal">
+    <h4>Xác nhận</h4>
+    <p id="confirmMessage">Bạn có chắc chắn muốn lưu thay đổi?</p>
+    <div class="modal-actions">
+      <button type="button"
+              id="confirmCancel"
+              class="btn"
+              style="background:#4b5563; color:#e5e7eb;">
+        Hủy
+      </button>
+      <button type="button"
+              id="confirmOk"
+              class="btn">
         Đồng ý
       </button>
     </div>
