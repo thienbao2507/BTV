@@ -1,9 +1,44 @@
 from django.contrib import admin
 from django.utils.html import mark_safe
 from .models import (
-    ThiSinh, GiamKhao, CuocThi, VongThi, BaiThi, PhieuChamDiem,
-    BaiThiTemplateSection, BaiThiTemplateItem, CapThiDau, ThiSinhCapThiDau, BanGiamDoc, BattleVote
+    CuocThi,
+    VongThi,
+    BaiThi,
+    BaiThiTemplateSection,
+    BaiThiTemplateItem,
+    ThiSinh,
+    GiamKhao,
+    GiamKhaoBaiThi,
+    BanGiamDoc,
+    PhieuChamDiem,
+    CapThiDau,
+    ThiSinhCapThiDau,
+    SpecialRoundPair,
+    SpecialRoundPairMember,
+    BattleVote,
 )
+
+admin.site.register(SpecialRoundPair)
+@admin.register(SpecialRoundPairMember)
+class SpecialRoundPairMemberAdmin(admin.ModelAdmin):
+    list_display = ("thi_sinh_info", "pair_info", "side", "slot")
+    list_filter = ("pair__cuocThi", "pair__vongThi", "side")
+    search_fields = ("thiSinh__maNV", "thiSinh__hoTen", "pair__id")
+
+    def thi_sinh_info(self, obj):
+        try:
+            return f"{obj.thiSinh.maNV} - {obj.thiSinh.hoTen}"
+        except Exception:
+            return str(obj)
+    thi_sinh_info.short_description = "Thí sinh"
+
+    def pair_info(self, obj):
+        try:
+            return f"Cặp {obj.pair.id}"
+        except Exception:
+            return ""
+    pair_info.short_description = "Cặp"
+
 
 @admin.register(ThiSinh)
 class ThiSinhAdmin(admin.ModelAdmin):

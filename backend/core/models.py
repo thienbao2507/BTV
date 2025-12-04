@@ -158,6 +158,7 @@ class VongThi(models.Model):
     ma = models.CharField(max_length=10, editable=False)
     tenVongThi = models.CharField(max_length=200)
     cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE, related_name="vong_thi")
+    is_special_bonus_round = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.ma:
@@ -166,6 +167,7 @@ class VongThi(models.Model):
 
     def __str__(self):
         return f"{self.ma} - {self.tenVongThi}"
+
 
 
 class BaiThi(models.Model):
@@ -295,6 +297,41 @@ class PhieuChamDiem(models.Model):
         # (TIME/TEMPLATE sẽ được quy đổi/validate ở bước 3B)
         self.updated_at = timezone.now()
         super().save(*args, **kwargs)
+        
+class SpecialRoundPair(models.Model):
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE)
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cặp đặc biệt - {self.id}"
+class SpecialRoundPairMember(models.Model):
+    pair = models.ForeignKey(SpecialRoundPair, on_delete=models.CASCADE, related_name="members")
+    thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE)
+    side = models.CharField(max_length=1)     # L hoặc R
+    slot = models.PositiveSmallIntegerField() # 1 hoặc 2
+
+    class Meta:
+        unique_together = ("pair", "slot")
+
+    def __str__(self):
+        return f"{self.thiSinh} - {self.side}"
+class BonusCompareLog(models.Model):
+    special_pair = models.ForeignKey(SpecialRoundPair, on_delete=models.CASCADE, null=True, blank=True)
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE)
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
+    baiThi = models.ForeignKey(BaiThi, on_delete=models.CASCADE)
+    giamKhao = models.ForeignKey(GiamKhao, on_delete=models.CASCADE)
+    thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE)
+
+    raw_score = models.FloatField(default=0)
+    raw_time = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("special_pair", "baiThi", "giamKhao", "thiSinh")
+
 
 class CapThiDau(models.Model):
     """

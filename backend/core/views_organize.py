@@ -7,12 +7,19 @@ import json
 from .models import CuocThi, VongThi, BaiThi, BaiThiTimeRule, BaiThiTemplateSection, BaiThiTemplateItem, GiamKhao, GiamKhaoBaiThi
 
 from .models import (
-    CuocThi, VongThi, BaiThi,
-    BaiThiTimeRule,
-    BaiThiTemplateSection, BaiThiTemplateItem,
-    GiamKhao, GiamKhaoBaiThi,
+    CuocThi,
+    VongThi,
+    BaiThi,
+    ThiSinh,
+    GiamKhao,
+    GiamKhaoBaiThi,
+    BanGiamDoc,
+    PhieuChamDiem,
+    CapThiDau,
+    ThiSinhCapThiDau,
+    SpecialRoundPair,
+    SpecialRoundPairMember,
 )
-
 
 # ============================================================
 # /organize/  (màn hình quản lý CT → VT → BT)
@@ -69,6 +76,9 @@ def organize_view(request, ct_id=None):
             # --------------------------------------------------
             # Đổi tên vòng thi
             # --------------------------------------------------
+                        # --------------------------------------------------
+            # Đổi tên vòng thi
+            # --------------------------------------------------
             if action == "rename_vt":
                 vt_id = request.POST.get("vongThi_id")
                 new_name = (request.POST.get("tenVongThi") or "").strip()
@@ -94,6 +104,121 @@ def organize_view(request, ct_id=None):
                 messages.success(
                     request,
                     f"Đã đổi tên vòng thi “{old_name}” → “{new_name}”."
+                )
+                return redirect(request.path)
+
+            # --------------------------------------------------
+            # Bật/Tắt vòng thi đặc biệt (bonus 100/0)
+            # --------------------------------------------------
+            if action == "toggle_vt_special":
+                vt_id = request.POST.get("vongThi_id")
+                if not vt_id:
+                    messages.error(request, "Thiếu ID vòng thi.")
+                    return redirect(request.path)
+
+                try:
+                    vt = VongThi.objects.get(id=vt_id)
+                except VongThi.DoesNotExist:
+                    messages.error(request, "Vòng thi không tồn tại.")
+                    return redirect(request.path)
+
+                new_state = (request.POST.get("is_special_bonus_round") == "on")
+                vt.is_special_bonus_round = new_state
+                vt.save(update_fields=["is_special_bonus_round"])
+
+                messages.success(
+                    request,
+                    f"Đã {'bật' if new_state else 'tắt'} chế độ vòng đặc biệt cho “{vt.tenVongThi}”."
+                )
+                return redirect(request.path)
+
+            # --------------------------------------------------
+            # Tạo cặp từ Top 20 vòng trước (vòng đặc biệt)
+            # --------------------------------------------------
+            if action == "create_special_pairs":
+                vt_id = request.POST.get("vongThi_id")
+                if not vt_id:
+                    messages.error(request, "Thiếu ID vòng thi.")
+                    return redirect(request.path)
+
+                try:
+                    vt = VongThi.objects.get(id=vt_id)
+                except VongThi.DoesNotExist:
+                    messages.error(request, "Vòng thi không tồn tại.")
+                    return redirect(request.path)
+
+                if not vt.is_special_bonus_round:
+                    messages.error(request, "Vòng này chưa bật chế độ đặc biệt.")
+                    return redirect(request.path)
+
+                # Tìm vòng trước trong cùng Cuộc Thi
+                prev_round = (
+                    VongThi.objects
+                    .filter(cuocThi=vt.cuocThi, id__lt=vt.id)
+                    .order_by("-id")
+                    .first()
+                )
+                if not prev_round:
+                    messages.error(request, "Không tìm thấy vòng trước để lấy Top 20.")
+                    return redirect(request.path)
+
+                # Lấy điểm vòng trước từ PhieuChamDiem
+                from django.db.models import Sum, Min
+
+                score_data = (
+                    PhieuChamDiem.objects
+                    .filter(vongThi=prev_round)
+                    .values("thiSinh")
+                    .annotate(
+                        total_diem=Sum("diem"),
+                        min_time=Min("thoiGian")
+                    )
+                    .order_by("-total_diem", "min_time", "thiSinh")[:20]
+                )
+
+                if score_data.count() < 2:
+                    messages.error(request, "Không đủ thí sinh để chia cặp.")
+                    return redirect(request.path)
+
+                # Xóa cặp đặc biệt cũ (nếu có)
+                SpecialRoundPairMember.objects.filter(pair__vongThi=vt).delete()
+                SpecialRoundPair.objects.filter(vongThi=vt).delete()
+
+                # Tạo cặp mới
+                s_ids = list(score_data.values_list("thiSinh", flat=True))
+                n = len(s_ids)
+                pair_count = n // 2
+
+                pairs_created = 0
+                for i in range(pair_count):
+                    left_id = s_ids[i]
+                    right_id = s_ids[-(i + 1)]
+
+                    # Tạo cặp đặc biệt mới
+                    pair = SpecialRoundPair.objects.create(
+                        cuocThi=vt.cuocThi,
+                        vongThi=vt,
+                    )
+
+                    # Tạo 2 member
+                    SpecialRoundPairMember.objects.create(
+                        pair=pair,
+                        thiSinh_id=left_id,
+                        side="L",
+                        slot=1
+                    )
+                    SpecialRoundPairMember.objects.create(
+                        pair=pair,
+                        thiSinh_id=right_id,
+                        side="R",
+                        slot=2
+                    )
+
+                    pairs_created += 1
+
+                messages.success(
+                    request,
+                    f"Đã tạo {pairs_created} cặp đặc biệt từ Top 20 vòng {prev_round.tenVongThi}."
                 )
                 return redirect(request.path)
             # --------------------------------------------------

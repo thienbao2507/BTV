@@ -42,34 +42,34 @@
 
     /* Liquid glass card */
     .card {
-    position: relative;
-    border-radius: 16px;
-    padding: 16px;
-    /* lớp kính trong suốt mờ */
-    background: linear-gradient( to bottom right, rgba(255,255,255,0.1), rgba(255,255,255,0.06) );
-    border: 1px solid rgba(255,255,255,0.14);
-    box-shadow:
-        0 10px 30px rgba(0,0,0,0.35),
-        inset 0 1px 0 rgba(255,255,255,0.08);
+        position: relative;
+        border-radius: 16px;
+        padding: 16px;
+        /* lớp kính trong suốt mờ */
+        background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.06));
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow:
+            0 10px 30px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
 
-    /* hiệu ứng blur kính */
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+        /* hiệu ứng blur kính */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
     }
 
     /* viền highlight mềm ở mép trên để “ướt” hơn */
     .card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background:
-        radial-gradient(120% 120% at -10% -20%, rgba(255,255,255,0.20), transparent 45%),
-        radial-gradient(110% 110% at 120% -10%, rgba(255,255,255,0.12), transparent 45%);
-    /* không che nội dung, chỉ tạo ánh sáng nhẹ */
-    mix-blend-mode: screen;
-    opacity: .7;
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        background:
+            radial-gradient(120% 120% at -10% -20%, rgba(255, 255, 255, 0.20), transparent 45%),
+            radial-gradient(110% 110% at 120% -10%, rgba(255, 255, 255, 0.12), transparent 45%);
+        /* không che nội dung, chỉ tạo ánh sáng nhẹ */
+        mix-blend-mode: screen;
+        opacity: .7;
     }
 
 
@@ -91,17 +91,17 @@
 
     .row select:hover,
     .row input:hover {
-    border-color: #3b4a6a;
+        border-color: #3b4a6a;
     }
 
     .row select:focus,
     .row input:focus {
-    border-color: #6ea8ff;
-    box-shadow: 0 0 0 3px rgba(110,168,255,0.25);
+        border-color: #6ea8ff;
+        box-shadow: 0 0 0 3px rgba(110, 168, 255, 0.25);
     }
-    
+
     .row input::placeholder {
-        color: rgba(229,231,235,0.70);   
+        color: rgba(229, 231, 235, 0.70);
     }
 
     .row input:disabled,
@@ -115,49 +115,56 @@
     }
 
     .btn {
-      background: #f4f1ecc6;
-      color: #223382;
-      border: none;
-      border-radius: 14px;
-      padding: 5px 10px;
-      font-weight: 500;
-      cursor: pointer;
-      text-align: center;
-      font-size: 13px;
+        background: #f4f1ecc6;
+        color: #223382;
+        border: none;
+        border-radius: 14px;
+        padding: 5px 10px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: center;
+        font-size: 13px;
 
-      -webkit-backdrop-filter: blur(8px) saturate(130%);
-      backdrop-filter: blur(8px) saturate(130%);
-      box-shadow:
-        0 12px 24px rgba(173, 188, 244, 0.25),
-        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        -webkit-backdrop-filter: blur(8px) saturate(130%);
+        backdrop-filter: blur(8px) saturate(130%);
+        box-shadow:
+            0 12px 24px rgba(173, 188, 244, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
+
     /* Nút icon: cao như .btn và canh giữa theo trục dọc */
-    .btn-icon{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 7px 14px;   /* giống .btn để cao ngang nhau */
-    line-height: 1;      /* tránh kéo dãn chiều cao */
-    vertical-align: middle;
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 14px;
+        /* giống .btn để cao ngang nhau */
+        line-height: 1;
+        /* tránh kéo dãn chiều cao */
+        vertical-align: middle;
     }
+
     .btn::after {
-      /* highlight gợn kính */
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: radial-gradient(120% 80% at 30% -10%,
-        rgba(255,255,255,0.45), rgba(255,255,255,0.0) 45%);
-      pointer-events: none;
+        /* highlight gợn kính */
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(120% 80% at 30% -10%,
+                rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.0) 45%);
+        pointer-events: none;
     }
 
     .btn:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 16px 30px rgba(212, 192, 249, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+        box-shadow:
+            0 16px 30px rgba(212, 192, 249, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
-    .btn:active { transform: translateY(0); }
+
+    .btn:active {
+        transform: translateY(0);
+    }
 
     .muted {
         color: var(--muted);
@@ -260,279 +267,365 @@
     .switch input:checked+.slider:before {
         transform: translateX(20px);
     }
+
     /* ------- Zebra table for modal config view ------- */
     #tplv-content table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
         border-radius: 14px;
-        overflow: hidden;          /* clip nền các hàng theo radius */
-        border: 1px solid #334155; /* viền nhẹ */
-        table-layout: fixed;       /* force equal-width columns */
+        overflow: hidden;
+        /* clip nền các hàng theo radius */
+        border: 1px solid #334155;
+        /* viền nhẹ */
+        table-layout: fixed;
+        /* force equal-width columns */
     }
 
     /* ===== Judge modal table: force consistent column alignment ===== */
     #judgev-content table {
         width: 100%;
-        border-collapse: collapse; 
-        table-layout: fixed; 
+        border-collapse: collapse;
+        table-layout: fixed;
     }
+
     #judgev-content thead th,
     #judgev-content tbody td {
-        padding: 8px 12px; /* reduced padding so table fits narrower modal */
+        padding: 8px 12px;
+        /* reduced padding so table fits narrower modal */
         vertical-align: middle;
         box-sizing: border-box;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    #judgev-content td:first-child, #judgev-content thead th:first-child {
+
+    #judgev-content td:first-child,
+    #judgev-content thead th:first-child {
         text-align: center;
     }
-    #judgev-content td:nth-child(2), #judgev-content thead th:nth-child(2) {
-        text-align: left; /* code column aligned left but narrow */
+
+    #judgev-content td:nth-child(2),
+    #judgev-content thead th:nth-child(2) {
+        text-align: left;
+        /* code column aligned left but narrow */
         font-weight: 600;
     }
-    #judgev-content td:nth-child(3), #judgev-content thead th:nth-child(3) {
-        text-align: left; /* name column expands */
+
+    #judgev-content td:nth-child(3),
+    #judgev-content thead th:nth-child(3) {
+        text-align: left;
+        /* name column expands */
     }
+
     #judgev-content td input[type="checkbox"] {
-        margin: 0; /* remove default checkbox offset */
+        margin: 0;
+        /* remove default checkbox offset */
         vertical-align: middle;
         width: 18px;
         height: 18px;
         accent-color: #fdfbf8;
         border-radius: 4px;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
     }
+
     #judgev-content td input[type="checkbox"]:checked {
-        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
     }
-    #judgev-content thead th { font-weight: 700; }
+
+    #judgev-content thead th {
+        font-weight: 700;
+    }
 
 
-    #tplv-content thead th {   
-        background: #0b1220;        /* đầu bảng đậm hơn */
+    #tplv-content thead th {
+        background: #0b1220;
+        /* đầu bảng đậm hơn */
         color: #e5e7eb;
         border-bottom: 1px solid #334155;
         padding: 8px 10px;
-        position: sticky; top: 0; z-index: 1; /* cố định header khi nội dung dài */
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        /* cố định header khi nội dung dài */
     }
 
     /* make columns evenly distributed in tpl view */
     #tplv-content thead th,
-    #tplv-content tbody td { width: 33%; }
+    #tplv-content tbody td {
+        width: 33%;
+    }
 
     #tplv-content tbody tr:nth-child(odd) {
-    background: rgba(255,255,255,0.12);   /* hàng 1,3,5... đậm hơn */
+        background: rgba(255, 255, 255, 0.12);
+        /* hàng 1,3,5... đậm hơn */
     }
 
     #tplv-content tbody tr:nth-child(even) {
-    background: rgba(255,255,255,0.06);   /* hàng 2,4,6... nhạt hơn */
+        background: rgba(255, 255, 255, 0.06);
+        /* hàng 2,4,6... nhạt hơn */
     }
 
     #tplv-content tbody tr:hover {
-    background: rgba(255,255,255,0.18);   /* hover nổi hơn */
+        background: rgba(255, 255, 255, 0.18);
+        /* hover nổi hơn */
     }
 
     #tplv-content td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #1f2937;
+        padding: 8px 10px;
+        border-bottom: 1px solid #1f2937;
     }
 
     /* ===== Căn giữa & giãn cách đều trong modal thời gian ===== */
     #time-modal .tm-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto; /* 3 cụm đều nhau */
-    align-items: center;                /* căn giữa theo trục dọc */
-    column-gap: 24px;
-    row-gap: 8px;
-    padding: 4px 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        /* 3 cụm đều nhau */
+        align-items: center;
+        /* căn giữa theo trục dọc */
+        column-gap: 24px;
+        row-gap: 8px;
+        padding: 4px 0;
     }
 
     #time-modal .tm-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: nowrap;
-    padding: 0 26px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        padding: 0 26px;
     }
 
     #time-modal .tm-label,
     #time-modal .tm-unit {
-    font-size: 14px;
-    color: #e5e7eb;
-    line-height: 1;
+        font-size: 14px;
+        color: #e5e7eb;
+        line-height: 1;
     }
 
     #time-modal .tm-input {
-    background: #0b1220;
-    border: 1px solid #243045;
-    border-radius: 8px;
-    color: #e5e7eb;
-    padding: 6px 10px;
-    font-size: 14px;
-    height: 36px;
-    width: 72px; /* vừa đủ để nhập phút/giây */
-    text-align: center;
+        background: #0b1220;
+        border: 1px solid #243045;
+        border-radius: 8px;
+        color: #e5e7eb;
+        padding: 6px 10px;
+        font-size: 14px;
+        height: 36px;
+        width: 72px;
+        /* vừa đủ để nhập phút/giây */
+        text-align: center;
     }
 
     #time-modal .tm-scorebox {
-    justify-content: flex-start;
-    gap: 10px;
+        justify-content: flex-start;
+        gap: 10px;
     }
 
     #time-modal .tm-del {
-    height: 36px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 12px;
-    font-size: 13px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 12px;
+        font-size: 13px;
     }
+
     /* Ẩn nút tăng/giảm (spinner) trong input number của modal thời gian */
     #time-modal input[type="number"]::-webkit-outer-spin-button,
     #time-modal input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+        -webkit-appearance: none;
+        margin: 0;
     }
 
     #time-modal input[type="number"] {
-    -moz-appearance: textfield;
-    appearance: textfield;
+        -moz-appearance: textfield;
+        appearance: textfield;
     }
+
     .download-link {
-            color: #b1c9ef;       
-            text-decoration: underline;
-            cursor: pointer;
-        }
-        .download-link:hover {
-            color: #167fef; 
-        }
+        color: #b1c9ef;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    .download-link:hover {
+        color: #167fef;
+    }
+
     /* NEW: highlight khi lỗi */
     .is-invalid {
-    border-color: #ef4444 !important;
-    box-shadow: 0 0 0 3px rgba(239,68,68,.18);
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, .18);
     }
 
     /* NEW: tip lỗi nhỏ cạnh field */
     .error-tip {
-    font-size: 12px;
-    color: #fca5a5;
-    margin-left: 8px;
-    }
-    .kebab{ position:relative; display:inline-block; margin-left:8px; }
-    .kebab-menu{
-    position:absolute; right:0; top:calc(100% + 6px);
-    background:#0b1220; border:1px solid #243045; border-radius:12px;
-    min-width:220px; padding:6px; box-shadow:0 12px 28px rgba(0,0,0,.4);
-    z-index:50;
-    }
-    .kebab-item{
-    display:block; width:100%; text-align:left; padding:8px 10px;
-    background:transparent; color:var(--txt); border:0; border-radius:10px;
-    }
-    .kebab-item:hover{ background:#182235; }
-    /* ==== Modal helpers: giới hạn chiều cao & cho nội dung cuộn ==== */
-    .modal-overlay {
-    padding: 24px;                 /* chừa khoảng để vẫn thấy viền card */
-    overflow: auto;                /* nếu card vẫn cao, overlay cho cuộn */
-    display: flex; align-items: center; justify-content: center;
+        font-size: 12px;
+        color: #fca5a5;
+        margin-left: 8px;
     }
 
-    .vt-header-btn{
-    background: rgba(15,23,42,0.85);
-    border-radius:999px;
-    border:1px solid #243045;
-    width:28px;
-    height:28px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    color:#e5e7eb;
-    font-size:13px;
-    box-shadow:0 8px 18px rgba(0,0,0,0.4);
+    .kebab {
+        position: relative;
+        display: inline-block;
+        margin-left: 8px;
     }
-    .vt-header-btn:hover{
-    background:rgba(31,41,55,0.95);
+
+    .kebab-menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        background: #0b1220;
+        border: 1px solid #243045;
+        border-radius: 12px;
+        min-width: 220px;
+        padding: 6px;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, .4);
+        z-index: 50;
     }
-    .vt-header-btn .vt-chevron{
-    font-size:12px;
-    transition:transform .2s ease;
+
+    .kebab-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        background: transparent;
+        color: var(--txt);
+        border: 0;
+        border-radius: 10px;
     }
-    .vt-header-btn.is-collapsed .vt-chevron{
-    transform:rotate(-90deg);   /* khi thu gọn thì quay mũi tên sang ngang */
+
+    .kebab-item:hover {
+        background: #182235;
+    }
+
+    /* ==== Modal helpers: giới hạn chiều cao & cho nội dung cuộn ==== */
+    .modal-overlay {
+        padding: 24px;
+        /* chừa khoảng để vẫn thấy viền card */
+        overflow: auto;
+        /* nếu card vẫn cao, overlay cho cuộn */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .vt-header-btn {
+        background: rgba(15, 23, 42, 0.85);
+        border-radius: 999px;
+        border: 1px solid #243045;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #e5e7eb;
+        font-size: 13px;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .vt-header-btn:hover {
+        background: rgba(31, 41, 55, 0.95);
+    }
+
+    .vt-header-btn .vt-chevron {
+        font-size: 12px;
+        transition: transform .2s ease;
+    }
+
+    .vt-header-btn.is-collapsed .vt-chevron {
+        transform: rotate(-90deg);
+        /* khi thu gọn thì quay mũi tên sang ngang */
     }
 
     .modal-card {
-    max-height: calc(100vh - 48px);/* card không cao hơn màn hình */
-    width: 1200px; max-width: 96vw;
-    display: flex; flex-direction: column;
-    overflow: hidden;              /* ẩn tràn bên trong, body sẽ cuộn */
+        max-height: calc(100vh - 48px);
+        /* card không cao hơn màn hình */
+        width: 1200px;
+        max-width: 96vw;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        /* ẩn tràn bên trong, body sẽ cuộn */
     }
 
-    .modal-header { flex: 0 0 auto; }
-    .modal-body   { 
-    flex: 1 1 auto; 
-    overflow: auto;                /* phần thân cuộn dọc */
-    min-height: 0;                 /* fix flex-overflow trên Firefox */
+    .modal-header {
+        flex: 0 0 auto;
+    }
+
+    .modal-body {
+        flex: 1 1 auto;
+        overflow: auto;
+        /* phần thân cuộn dọc */
+        min-height: 0;
+        /* fix flex-overflow trên Firefox */
     }
 
     /* Bảng bên trong vùng xem cấu hình: giữ sticky header, thân cuộn mượt */
-    #tplv-content { height: 100%; }
-    #tplv-content .scroll-box {
-    max-height: 100%;
-    overflow: auto;
+    #tplv-content {
+        height: 100%;
     }
+
+    #tplv-content .scroll-box {
+        max-height: 100%;
+        overflow: auto;
+    }
+
     /* Modal xác nhận nhỏ (dùng chung với competitions) */
     .modal {
-        background:#020617;
-        border-radius:14px;
-        border:1px solid #1e293b;
-        padding:16px 18px;
-        width:380px;
-        max-width:95vw;
-        box-shadow:0 18px 45px rgba(0,0,0,.6);
+        background: #020617;
+        border-radius: 14px;
+        border: 1px solid #1e293b;
+        padding: 16px 18px;
+        width: 380px;
+        max-width: 95vw;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, .6);
     }
-    .modal h4{
-        margin:0 0 8px;
-        font-size:16px;
-        font-weight:600;
-        color:#e5e7eb;
+
+    .modal h4 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        font-weight: 600;
+        color: #e5e7eb;
     }
-    .modal p{
-        margin:0 0 14px;
-        font-size:14px;
-        color:#cbd5e1;
-        white-space:pre-line; /* để xuống dòng \n trong message */
+
+    .modal p {
+        margin: 0 0 14px;
+        font-size: 14px;
+        color: #cbd5e1;
+        white-space: pre-line;
+        /* để xuống dòng \n trong message */
     }
-    .modal-actions{
-        display:flex;
-        justify-content:flex-end;
-        gap:8px;
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
     }
-    .modal-actions .btn{
-        margin-left:0;
+
+    .modal-actions .btn {
+        margin-left: 0;
     }
 
     /* (tuỳ chọn) các modal khác cũng nên có giới hạn tương tự */
-    #time-modal > div,
-    #tpl-modal  > div {
-    max-height: calc(100vh - 48px);
-    overflow: auto;
+    #time-modal>div,
+    #tpl-modal>div {
+        max-height: calc(100vh - 48px);
+        overflow: auto;
     }
+
     .vt-btn-clean {
-    background: none;
-    border: none;
-    padding: 4px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #e5e7eb;
-    opacity: 0.8;
-    transition: opacity .2s ease, transform .15s ease;
+        background: none;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #e5e7eb;
+        opacity: 0.8;
+        transition: opacity .2s ease, transform .15s ease;
     }
 
     .vt-btn-clean:hover {
@@ -552,26 +645,27 @@
     .vt-btn-clean.is-collapsed .vt-chevron-icon {
         transform: rotate(-90deg);
     }
+
     /* Ô chứa 2 nút — kiểu giống textfield */
-.vt-controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 10px;
+    .vt-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 10px;
 
-    /* Giống input của bạn */
-    background: #0b122072;
-    border: 1px solid #243045;
+        /* Giống input của bạn */
+        background: #0b122072;
+        border: 1px solid #243045;
 
-    /* Blur kính */
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+        /* Blur kính */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
 
-    /* Bóng đổ nhẹ giống input */
-    box-shadow:
-        0 2px 5px rgba(0,0,0,0.25),
-        inset 0 1px 0 rgba(255,255,255,0.06);
+        /* Bóng đổ nhẹ giống input */
+        box-shadow:
+            0 2px 5px rgba(0, 0, 0, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
     }
 
     /* Nút icon bên trong container */
@@ -601,429 +695,443 @@
     .vt-icon-btn.is-collapsed .vt-chevron-icon {
         transform: rotate(-90deg);
     }
-    </style>
+
+    .vt-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    .vt-title-input {
+        background: #0b122072;
+        color: #e5e7eb;
+        border: 1px solid #243045;
+        border-radius: 8px;
+        padding: 6px 10px;
+        min-width: 220px;
+        font-weight: 600;
+    }
+
+    .vt-special {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-split {
+        padding: 6px 12px;
+        background: #2563eb;
+        border-radius: 6px;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .vt-controls {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="container">
-        <div style="margin:6px 0; margin-top: 50px;">
-            <a href="/organize/competitions/" style="color:#edf0f3;text-decoration:none">← Trang Danh sách cuộc thi</a>
+<div class="container">
+    <div style="margin:6px 0; margin-top: 50px;">
+        <a href="/organize/competitions/" style="color:#edf0f3;text-decoration:none">← Trang Danh sách cuộc thi</a>
+    </div>
+
+    {% if messages %}
+    <div style="margin:10px 0">
+        {% for m in messages %}
+        <div style="margin:6px 0; padding:8px 10px; border-radius:8px; background:#064e3b; color:#d1fae5;">
+            {{ m }}
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="grid">
 
-        {% if messages %}
-        <div style="margin:10px 0">
-            {% for m in messages %}
-            <div style="margin:6px 0; padding:8px 10px; border-radius:8px; background:#064e3b; color:#d1fae5;">
-                {{ m }}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        <div class="grid">
+        <!-- Danh sách Cuộc thi -->
+        <div class="card">
+            <div class="sec-title">Danh sách cuộc thi</div>
+            <div class="muted">Nhấn “Thêm vòng thi” / “Thêm bài thi” để bổ sung nhanh.</div>
+            <div class="hr"></div>
 
-            <!-- Danh sách Cuộc thi -->
-            <div class="card">
-                <div class="sec-title">Danh sách cuộc thi</div>
-                <div class="muted">Nhấn “Thêm vòng thi” / “Thêm bài thi” để bổ sung nhanh.</div>
-                <div class="hr"></div>
+            {% for ct in cuoc_this %}
+            <div class="ct">
+                <div>
+                    &nbsp;{{ ct.tenCuocThi }}
+                    &nbsp;<span class="status {{ ct.trangThai|yesno:'on,off' }}">
+                        {{ ct.trangThai|yesno:"Đang bật,Đang tắt" }}
+                    </span>
 
-                {% for ct in cuoc_this %}
-                <div class="ct">
-                    <div>
-                        &nbsp;{{ ct.tenCuocThi }}
-                        &nbsp;<span class="status {{ ct.trangThai|yesno:'on,off' }}">
-                            {{ ct.trangThai|yesno:"Đang bật,Đang tắt" }}
-                        </span>
+                    <!-- Nút trượt bật/tắt ngay bên cạnh -->
+                    <form method="post" style="display:inline-block; margin-left:8px">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_ct">
+                        <input type="hidden" name="cuocThi_id" value="{{ ct.id }}">
+                        <label class="switch" title="Bật/tắt cuộc thi">
+                            <input type="checkbox" name="trangThai" {% if ct.trangThai %}checked{% endif %}
+                                onchange="this.form.submit()">
+                            <span class="slider"></span>
+                        </label>
+                    </form>
 
-                        <!-- Nút trượt bật/tắt ngay bên cạnh -->
-                        <form method="post" style="display:inline-block; margin-left:8px">
+
+                </div>
+
+                <!-- Form thêm Vòng thi cho Cuộc thi này -->
+                <form method="post" class="row" style="margin-top:8px;align-items:center;gap:10px">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_vt">
+                    <input type="hidden" name="cuocThi_id" value="{{ ct.id }}">
+                    <label>Thêm vòng thi</label>
+                    <input type="text" name="tenVongThi" placeholder="VD: Vòng loại" required>
+                    <button class="btn" type="submit">Thêm vòng</button>
+                </form>
+
+                {% for vt in ct.vong_thi.all %}
+                <div class="vt">
+
+                    <!-- HEADER VÒNG THI: tên = input + nút Lưu + nút xóa/thu gọn -->
+                    <div class="vt-header">
+                        <!-- Đổi tên vòng -->
+                        <form method="post" class="js-rename-vt-form">
                             {% csrf_token %}
-                            <input type="hidden" name="action" value="toggle_ct">
-                            <input type="hidden" name="cuocThi_id" value="{{ ct.id }}">
-                            <label class="switch" title="Bật/tắt cuộc thi">
-                                <input type="checkbox" name="trangThai" {% if ct.trangThai %}checked{% endif %}
+                            <input type="hidden" name="action" value="rename_vt">
+                            <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
+                            <input class="vt-title-input" type="text" name="tenVongThi" value="{{ vt.tenVongThi }}"
+                                data-init="{{ vt.tenVongThi|escapejs }}">
+                        </form>
+
+                        <!-- Vòng đặc biệt -->
+                        <form method="post" class="vt-special">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle_vt_special">
+                            <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
+                            <label class="switch">
+                                <input type="checkbox" name="is_special_bonus_round"
+                                    {% if vt.is_special_bonus_round %}checked{% endif %}
                                     onchange="this.form.submit()">
                                 <span class="slider"></span>
                             </label>
                         </form>
 
+                        <!-- Bắt đầu chia cặp -->
+                        {% if vt.is_special_bonus_round %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_special_pairs">
+                            <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
+                            <button class="btn-split">Bắt đầu chia cặp</button>
+                        </form>
+                        {% endif %}
 
+                        <!-- Nút xóa & collapse -->
+                        <div class="vt-controls">
+                            <button type="button" class="vt-icon-btn" data-delete-vt data-vtid="{{ vt.id }}">
+                                ❌
+                            </button>
+                            <button type="button" class="vt-icon-btn" data-vt-toggle="{{ vt.id }}">
+                                ▼
+                            </button>
+                        </div>
                     </div>
+                    <!-- BODY VÒNG THI GIỮ NGUYÊN -->
+                    <div class="vt-body" data-vt-body="{{ vt.id }}" style="margin-top:8px;">
 
-                    <!-- Form thêm Vòng thi cho Cuộc thi này -->
-                    <form method="post" class="row" style="margin-top:8px;align-items:center;gap:10px">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="create_vt">
-                        <input type="hidden" name="cuocThi_id" value="{{ ct.id }}">
-                        <label>Thêm vòng thi</label>
-                        <input type="text" name="tenVongThi" placeholder="VD: Vòng loại" required>
-                        <button class="btn" type="submit">Thêm vòng</button>
-                    </form>
+                        <!-- Form thêm Bài thi cho Vòng này -->
+                        <form method="post" class="row" style="margin-top:8px;align-items:center;gap:10px">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="create_bt">
+                            <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
 
-{% for vt in ct.vong_thi.all %}
-    <div class="vt">
-
-        <!-- HEADER VÒNG THI: tên = input + nút Lưu + nút xóa/thu gọn -->
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-
-<!-- Form đổi tên vòng thi (auto-popup, không cần nút Lưu) -->
-<form method="post"
-      class="js-rename-vt-form"
-      style="display:flex; align-items:center; gap:8px; margin:0;">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="rename_vt">
-    <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
-
-    <input type="text"
-           name="tenVongThi"
-           value="{{ vt.tenVongThi }}"
-           data-init="{{ vt.tenVongThi|escapejs }}"
-           style="background:#0b122072;
-                  color:#e5e7eb;
-                  border:1px solid #243045;
-                  border-radius:8px;
-                  padding:6px 10px;
-                  min-width:220px;
-                  font-weight:600;">
-</form>
-
-
-            <!-- Ô chứa 2 nút icon (xóa / ẩn-hiện) giữ nguyên để JS dùng -->
-            <div class="vt-controls">
-                <!-- Xóa vòng thi -->
-                <button type="button"
-                        class="vt-icon-btn"
-                        title="Xóa vòng thi"
-                        data-delete-vt
-                        data-vtid="{{ vt.id }}"
-                        data-vtname="{{ vt.tenVongThi }}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-
-                <!-- Ẩn / hiện -->
-                <button type="button"
-                        class="vt-icon-btn"
-                        title="Ẩn/hiện vòng thi"
-                        data-vt-toggle="{{ vt.id }}">
-                    <svg class="vt-chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <!-- BODY VÒNG THI GIỮ NGUYÊN -->
-        <div class="vt-body" data-vt-body="{{ vt.id }}" style="margin-top:8px;">
-
-                                <!-- Form thêm Bài thi cho Vòng này -->
-                                <form method="post" class="row" style="margin-top:8px;align-items:center;gap:10px">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="create_bt">
-                                    <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
-
-                                    <div class="card add-bt"
-                                        style="position:relative; display:grid; grid-template-columns:1fr; gap:10px;
+                            <div class="card add-bt" style="position:relative; display:grid; grid-template-columns:1fr; gap:10px;
                                                 margin-bottom:8px; margin: 8px 0 8px; width: calc(100% - 24px);">
 
-                                        <!-- Hàng chính chia làm 2 cột: trái & phải -->
-                                        <div class="row" style="
+                                <!-- Hàng chính chia làm 2 cột: trái & phải -->
+                                <div class="row" style="
                                                 display: flex;
                                                 justify-content: flex-start;
                                                 align-items: flex-start;
-                                                gap: 100px;
+                                                gap: 24px;
                                                 flex-wrap: wrap;
                                             ">
 
-                                            <!-- Cột trái: Thêm bài thi + Giám khảo -->
-                                            <div style="display: flex; flex-direction: column; gap: 12px; min-width: 280px;">
-                                                <div style="display: flex; align-items: center; gap: 10px;">
-                                                    <label>Thêm bài thi</label>
-                                                    <input type="text" name="tenBaiThi" placeholder="VD: Lý thuyết" required
-                                                        style="min-width: 225px;">
-                                                </div>
-
-                                                <div style="display: flex; align-items: center; gap: 10px;">
-                                                    <label>Giám khảo chấm</label>
-                                                    <select name="judge_id" style="min-width: 180px;">
-                                                        <option value="">— Chọn giám khảo —</option>
-                                                        {% for gk in judges %}
-                                                        <option value="{{ gk.maNV }}">{{ gk.hoTen }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <!-- Cột phải: Phương thức chấm + cấu hình -->
-                                            <div style="display: flex; flex-direction: column; gap: 12px; min-width: 280px;">
-                                                <div style="display: flex; align-items: center; gap: 10px;">
-                                                    <label>Phương thức chấm</label>
-                                                    <select name="phuongThucCham" class="js-method" style="min-width: 220px;">
-                                                        <option value="TIME">Chấm theo thời gian</option>
-                                                        <option value="TEMPLATE">Chấm theo mẫu</option>
-                                                        <option value="POINTS" selected>Chấm theo thang điểm</option>
-                                                    </select>
-                                                </div>
-
-                                                <div class="js-method-extra"
-                                                    style="display: flex; align-items: center; gap: 10px;">
-                                                    <label class="js-max-label" style="display:none;">Điểm tối đa</label>
-                                                    <input class="js-max-input" type="number" name="cachChamDiem" min="1" step="1"
-                                                        placeholder="VD: 10"
-                                                        style="display:none; width:100px;">
-                                                    <label class="js-file-template" style="display:none;">
-                                                        Mẫu chấm thi:
-                                                        <a class="download-link"
-                                                        href="{% static 'files/mẫu chấm thi.xlsx' %}"
-                                                        download>file_mẫu_thí_sinh.xlsx</a>
-                                                    </label>
-                                                </div>
-                                            </div>
+                                    <!-- Cột trái: Thêm bài thi + Giám khảo -->
+                                    <div style="display: flex; flex-direction: column; gap: 12px; min-width: 280px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label>Thêm bài thi</label>
+                                            <input type="text" name="tenBaiThi" placeholder="VD: Lý thuyết" required
+                                                style="min-width: 225px;">
                                         </div>
 
-                                        <!-- Nút ở góc phải dưới -->
-                                        <button class="btn" type="submit"
-                                                style="position:absolute; right:12px; bottom:12px;">
-                                            Thêm bài
-                                        </button>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label>Giám khảo chấm</label>
+                                            <select name="judge_id" style="min-width: 180px;">
+                                                <option value="">— Chọn giám khảo —</option>
+                                                {% for gk in judges %}
+                                                <option value="{{ gk.maNV }}">{{ gk.hoTen }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
                                     </div>
-                                </form>
 
-                                {% for bt in vt.bai_thi.all %}
-                                <div class="bt">
-                                    <div>
-                                        {{ bt.tenBaiThi }}
-
-                                        {% if bt.phuongThucCham == "POINTS" %}
-                                        — Thang điểm (Max: {{ bt.cachChamDiem }})
-
-                                        <div class="kebab" data-menu-btid="{{ bt.id }}">
-                                            <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
-                                                <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
-                                                    style="display:block;pointer-events:none">
-                                            </button>
-                                            <div class="kebab-menu" style="display:none">
-                                                <button class="kebab-item" type="button"
-                                                        data-open-judge-view
-                                                        data-btid="{{ bt.id }}">
-                                                    Xem giám khảo chấm
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-delete-bt
-                                                        data-btid="{{ bt.id }}"
-                                                        data-btname="{{ bt.tenBaiThi }}">
-                                                    Xóa bài thi
-                                                </button>
-                                            </div>
+                                    <!-- Cột phải: Phương thức chấm + cấu hình -->
+                                    <div style="display: flex; flex-direction: column; gap: 12px; min-width: 280px;">
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <label>Phương thức chấm</label>
+                                            <select name="phuongThucCham" class="js-method" style="min-width: 220px;">
+                                                <option value="TIME">Chấm theo thời gian</option>
+                                                <option value="TEMPLATE">Chấm theo mẫu</option>
+                                                <option value="POINTS" selected>Chấm theo thang điểm</option>
+                                            </select>
                                         </div>
 
-                                        <div id="tplview-{{ bt.id }}" style="display:none">
-                                            <div style="margin-bottom:8px">
-                                                {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
-                                            </div>
-                                            <div style="font-size:14px">
-                                                Điểm tối đa: <strong>{{ bt.cachChamDiem }}</strong>
-                                            </div>
-                                        </div>
-
-                                        {% elif bt.phuongThucCham == "TIME" %}
-                                        — Theo thời gian
-
-                                        <div class="kebab" data-menu-btid="{{ bt.id }}">
-                                            <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
-                                                <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
-                                                    style="display:block;pointer-events:none">
-                                            </button>
-                                            <div class="kebab-menu" style="display:none">
-                                                <button class="kebab-item" type="button"
-                                                        data-open-tpl-view
-                                                        data-target="tplview-{{ bt.id }}">
-                                                    Xem cấu hình
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-open-time-modal
-                                                        data-btid="{{ bt.id }}"
-                                                        data-rules='[{% for r in bt.time_rules.all %}
-                                                            {"start":{{ r.start_seconds }},"end":{{ r.end_seconds }},"score":{{ r.score }}}
-                                                            {% if not forloop.last %},{% endif %}
-                                                        {% endfor %}]'>
-                                                    Cấu hình thang thời gian
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-open-judge-view
-                                                        data-btid="{{ bt.id }}">
-                                                    Xem giám khảo chấm
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-delete-bt
-                                                        data-btid="{{ bt.id }}"
-                                                        data-btname="{{ bt.tenBaiThi }}">
-                                                    Xóa bài thi
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div id="tplview-{{ bt.id }}" style="display:none">
-                                            <div style="margin-bottom:8px">
-                                                {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
-                                            </div>
-                                            <table class="table" style="width:100%;">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="text-align:left; padding:6px 8px">Thời gian bắt đầu</th>
-                                                        <th style="text-align:left; padding:6px 8px">Thời gian kết thúc</th>
-                                                        <th style="text-align:left; padding:6px 8px">Điểm</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for r in bt.time_rules.all %}
-                                                    <tr>
-                                                        <td style="padding:6px 8px">{{ r.start_seconds }}</td>
-                                                        <td style="padding:6px 8px">{{ r.end_seconds }}</td>
-                                                        <td style="padding:6px 8px">{{ r.score }}</td>
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {% else %}
-                                        — Theo mẫu
-
-                                        <div class="kebab" data-menu-btid="{{ bt.id }}">
-                                            <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
-                                                <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
-                                                    style="display:block;pointer-events:none">
-                                            </button>
-                                            <div class="kebab-menu" style="display:none">
-                                                <button class="kebab-item" type="button"
-                                                        data-open-tpl-view
-                                                        data-target="tplview-{{ bt.id }}">
-                                                    Xem cấu hình chấm mẫu
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-open-tpl-modal
-                                                        data-btid="{{ bt.id }}">
-                                                    Cấu hình mẫu chấm
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-open-judge-view
-                                                        data-btid="{{ bt.id }}">
-                                                    Xem giám khảo chấm
-                                                </button>
-                                                <button class="kebab-item" type="button"
-                                                        data-delete-bt
-                                                        data-btid="{{ bt.id }}"
-                                                        data-btname="{{ bt.tenBaiThi }}">
-                                                    Xóa bài thi
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {% if bt.template_sections.all|length %}
-                                        <div id="tplview-{{ bt.id }}" style="display:none">
-                                            <div style="margin-bottom:8px">
-                                                {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
-                                            </div>
-                                            <table class="table" style="width:100%;">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
-                                                            Mục lớn
-                                                        </th>
-                                                        <th style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
-                                                            Mục nhỏ
-                                                        </th>
-                                                        <th style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
-                                                            Điểm/Max
-                                                        </th>
-                                                        <th style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
-                                                            Ghi chú
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for s in bt.template_sections.all %}
-                                                        {% for i in s.items.all %}
-                                                            <tr>
-                                                                <td style="padding:6px 8px">
-                                                                    {{ s.title }}
-                                                                </td>
-                                                                <td style="padding:6px 8px">
-                                                                    {{ i.content }}
-                                                                </td>
-                                                                <td style="padding:6px 8px; text-align:center">
-                                                                    {% if i.max_score or i.max_score == 0 %}
-                                                                        {{ i.max_score }}
-                                                                    {% else %}
-                                                                        -
-                                                                    {% endif %}
-                                                                </td>
-                                                                <td style="padding:6px 8px">
-                                                                    {% if i.ghiChu %}
-                                                                        {{ i.ghiChu }}
-                                                                    {% elif i.note %}
-                                                                        {{ i.note }}
-                                                                    {% else %}
-                                                                    {% endif %}
-                                                                </td>
-                                                            </tr>
-                                                        {% endfor %}
-                                                    {% empty %}
-                                                        <tr>
-                                                            <td colspan="4" class="muted" style="padding:6px 8px">
-                                                                Chưa có mục nhỏ.
-                                                            </td>
-                                                        </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        {% endif %}
-                                        {% endif %}
-
-                                        <div id="assigned-{{ bt.id }}" hidden
-                                            data-assigned="{% for a in bt.assignments %}{{ a.giamKhao.maNV }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                                            data-title="{{ bt.tenBaiThi|escape }}">
+                                        <div class="js-method-extra"
+                                            style="display: flex; align-items: center; gap: 10px;">
+                                            <label class="js-max-label" style="display:none;">Điểm tối đa</label>
+                                            <input class="js-max-input" type="number" name="cachChamDiem" min="1"
+                                                step="1" placeholder="VD: 10" style="display:none; width:100px;">
+                                            <label class="js-file-template" style="display:none;">
+                                                Mẫu chấm thi:
+                                                <a class="download-link" href="{% static 'files/mẫu chấm thi.xlsx' %}"
+                                                    download>file_mẫu_thí_sinh.xlsx</a>
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
-                                {% empty %}
-                                <div class="bt muted">Chưa có bài thi.</div>
-                                {% endfor %}
-                            </div> <!-- /vt-body -->
+
+                                <!-- Nút ở góc phải dưới -->
+                                <button class="btn" type="submit" style="position:absolute; right:12px; bottom:12px;">
+                                    Thêm bài
+                                </button>
+                            </div>
+                        </form>
+
+                        {% for bt in vt.bai_thi.all %}
+                        <div class="bt">
+                            <div>
+                                {{ bt.tenBaiThi }}
+
+                                {% if bt.phuongThucCham == "POINTS" %}
+                                — Thang điểm (Max: {{ bt.cachChamDiem }})
+
+                                <div class="kebab" data-menu-btid="{{ bt.id }}">
+                                    <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
+                                        <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
+                                            style="display:block;pointer-events:none">
+                                    </button>
+                                    <div class="kebab-menu" style="display:none">
+                                        <button class="kebab-item" type="button" data-open-judge-view
+                                            data-btid="{{ bt.id }}">
+                                            Xem giám khảo chấm
+                                        </button>
+                                        <button class="kebab-item" type="button" data-delete-bt data-btid="{{ bt.id }}"
+                                            data-btname="{{ bt.tenBaiThi }}">
+                                            Xóa bài thi
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="tplview-{{ bt.id }}" style="display:none">
+                                    <div style="margin-bottom:8px">
+                                        {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
+                                    </div>
+                                    <div style="font-size:14px">
+                                        Điểm tối đa: <strong>{{ bt.cachChamDiem }}</strong>
+                                    </div>
+                                </div>
+
+                                {% elif bt.phuongThucCham == "TIME" %}
+                                — Theo thời gian
+
+                                <div class="kebab" data-menu-btid="{{ bt.id }}">
+                                    <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
+                                        <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
+                                            style="display:block;pointer-events:none">
+                                    </button>
+                                    <div class="kebab-menu" style="display:none">
+                                        <button class="kebab-item" type="button" data-open-tpl-view
+                                            data-target="tplview-{{ bt.id }}">
+                                            Xem cấu hình
+                                        </button>
+                                        <button class="kebab-item" type="button" data-open-time-modal
+                                            data-btid="{{ bt.id }}" data-rules='[{% for r in bt.time_rules.all %}
+                                                            {"start":{{ r.start_seconds }},"end":{{ r.end_seconds }},"score":{{ r.score }}}
+                                                            {% if not forloop.last %},{% endif %}
+                                                        {% endfor %}]'>
+                                            Cấu hình thang thời gian
+                                        </button>
+                                        <button class="kebab-item" type="button" data-open-judge-view
+                                            data-btid="{{ bt.id }}">
+                                            Xem giám khảo chấm
+                                        </button>
+                                        <button class="kebab-item" type="button" data-delete-bt data-btid="{{ bt.id }}"
+                                            data-btname="{{ bt.tenBaiThi }}">
+                                            Xóa bài thi
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="tplview-{{ bt.id }}" style="display:none">
+                                    <div style="margin-bottom:8px">
+                                        {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
+                                    </div>
+                                    <table class="table" style="width:100%;">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align:left; padding:6px 8px">Thời gian bắt đầu</th>
+                                                <th style="text-align:left; padding:6px 8px">Thời gian kết thúc</th>
+                                                <th style="text-align:left; padding:6px 8px">Điểm</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for r in bt.time_rules.all %}
+                                            <tr>
+                                                <td style="padding:6px 8px">{{ r.start_seconds }}</td>
+                                                <td style="padding:6px 8px">{{ r.end_seconds }}</td>
+                                                <td style="padding:6px 8px">{{ r.score }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {% else %}
+                                — Theo mẫu
+
+                                <div class="kebab" data-menu-btid="{{ bt.id }}">
+                                    <button class="btn btn-icon kebab-toggle" type="button" aria-label="Mở menu">
+                                        <img src="{% static 'pics/more.png' %}" alt="menu" width="18" height="18"
+                                            style="display:block;pointer-events:none">
+                                    </button>
+                                    <div class="kebab-menu" style="display:none">
+                                        <button class="kebab-item" type="button" data-open-tpl-view
+                                            data-target="tplview-{{ bt.id }}">
+                                            Xem cấu hình chấm mẫu
+                                        </button>
+                                        <button class="kebab-item" type="button" data-open-tpl-modal
+                                            data-btid="{{ bt.id }}">
+                                            Cấu hình mẫu chấm
+                                        </button>
+                                        <button class="kebab-item" type="button" data-open-judge-view
+                                            data-btid="{{ bt.id }}">
+                                            Xem giám khảo chấm
+                                        </button>
+                                        <button class="kebab-item" type="button" data-delete-bt data-btid="{{ bt.id }}"
+                                            data-btname="{{ bt.tenBaiThi }}">
+                                            Xóa bài thi
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {% if bt.template_sections.all|length %}
+                                <div id="tplview-{{ bt.id }}" style="display:none">
+                                    <div style="margin-bottom:8px">
+                                        {{ vt.tenVongThi }} &nbsp;•&nbsp; {{ bt.tenBaiThi }}
+                                    </div>
+                                    <table class="table" style="width:100%;">
+                                        <thead>
+                                            <tr>
+                                                <th
+                                                    style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
+                                                    Mục lớn
+                                                </th>
+                                                <th
+                                                    style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
+                                                    Mục nhỏ
+                                                </th>
+                                                <th
+                                                    style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
+                                                    Điểm/Max
+                                                </th>
+                                                <th
+                                                    style="text-align:center; border-bottom:1px solid #334155; padding:6px 8px">
+                                                    Ghi chú
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for s in bt.template_sections.all %}
+                                            {% for i in s.items.all %}
+                                            <tr>
+                                                <td style="padding:6px 8px">
+                                                    {{ s.title }}
+                                                </td>
+                                                <td style="padding:6px 8px">
+                                                    {{ i.content }}
+                                                </td>
+                                                <td style="padding:6px 8px; text-align:center">
+                                                    {% if i.max_score or i.max_score == 0 %}
+                                                    {{ i.max_score }}
+                                                    {% else %}
+                                                    -
+                                                    {% endif %}
+                                                </td>
+                                                <td style="padding:6px 8px">
+                                                    {% if i.ghiChu %}
+                                                    {{ i.ghiChu }}
+                                                    {% elif i.note %}
+                                                    {{ i.note }}
+                                                    {% else %}
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="4" class="muted" style="padding:6px 8px">
+                                                    Chưa có mục nhỏ.
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% endif %}
+
+                                {% endif %}
+                                <div id="assigned-{{ bt.id }}" hidden
+                                    data-assigned="{% for a in bt.assignments %}{{ a.giamKhao.maNV }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                                    data-title="{{ bt.tenBaiThi|escape }}">
+                                </div>
+                            </div>
                         </div>
                         {% empty %}
-                        <div class="vt muted">Chưa có vòng thi.</div>
+                        <div class="bt muted">Chưa có bài thi.</div>
                         {% endfor %}
-
+                    </div> <!-- /vt-body -->
                 </div>
-                <div class="hr"></div>
                 {% empty %}
-                <div class="muted">Chưa có cuộc thi nào. Hãy tạo cuộc thi đầu tiên ở trên.</div>
+                <div class="vt muted">Chưa có vòng thi.</div>
                 {% endfor %}
-            </div>
-        </div>
 
-        <p class="muted" style="margin-top:10px">
-            Tip: Mã (CTxxx/VTxxx/BTxxx) sẽ tự sinh khi tạo mới.
-        </p>
+            </div>
+            <div class="hr"></div>
+            {% empty %}
+            <div class="muted">Chưa có cuộc thi nào. Hãy tạo cuộc thi đầu tiên ở trên.</div>
+            {% endfor %}
+        </div>
     </div>
 
-    <!-- MODAL cấu hình thời gian -->
-    <div id="time-modal"
-        style="display:none; position:fixed; inset:0; background:#0009; z-index:1000; align-items:center; justify-content:center;">
-        <div
-            style="background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; width:1100px; max-width:95vw">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-                <div class="sec-title">Cấu hình thang thời gian</div>
-                <button id="tm-close" class="btn" type="button">Đóng</button>
-            </div>
-            <form id="tm-form" method="post">
+    <p class="muted" style="margin-top:10px">
+        Tip: Mã (CTxxx/VTxxx/BTxxx) sẽ tự sinh khi tạo mới.
+    </p>
+</div>
+
+<!-- MODAL cấu hình thời gian -->
+<div id="time-modal"
+    style="display:none; position:fixed; inset:0; background:#0009; z-index:1000; align-items:center; justify-content:center;">
+    <div
+        style="background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; width:1100px; max-width:95vw">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div class="sec-title">Cấu hình thang thời gian</div>
+            <button id="tm-close" class="btn" type="button">Đóng</button>
+        </div>
+        <form id="tm-form" method="post">
             {% csrf_token %}
             <input type="hidden" name="action" value="config_time_rules">
             <input type="hidden" name="baiThi_id" id="tm-btid">
@@ -1034,9 +1142,9 @@
             </div>
 
             <div id="tm-rows" class="grid" style="gap:8px"></div>
-            </form>
+        </form>
 
-            <div class="row" style="margin-top:12px; justify-content:flex-end; gap:12px; align-items:center">
+        <div class="row" style="margin-top:12px; justify-content:flex-end; gap:12px; align-items:center">
             <form id="tm-import-form" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="time_upload_preview">
@@ -1052,164 +1160,144 @@
             </a>
             <!-- Nút này submit form CHÍNH nhờ thuộc tính form="tm-form" -->
             <button class="btn" type="submit" form="tm-form">Lưu cấu hình</button>
-            </div>
         </div>
     </div>
-    <!-- MODAL cấu hình mẫu chấm -->
-    <div id="tpl-modal"
-        style="display:none; position:fixed; inset:0; background:#0009; z-index:1000; align-items:center; justify-content:center;">
-        <div
-            style="background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; width:560px; max-width:95vw">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-                <div class="sec-title">Import mẫu chấm (Excel)</div>
-                <button id="tpl-close" class="btn" type="button">Đóng</button>
-            </div>
+</div>
+<!-- MODAL cấu hình mẫu chấm -->
+<div id="tpl-modal"
+    style="display:none; position:fixed; inset:0; background:#0009; z-index:1000; align-items:center; justify-content:center;">
+    <div
+        style="background:#111827; border:1px solid #1f2937; border-radius:12px; padding:16px; width:560px; max-width:95vw">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div class="sec-title">Import mẫu chấm (Excel)</div>
+            <button id="tpl-close" class="btn" type="button">Đóng</button>
+        </div>
 
-            <form id="tpl-form" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="config_template_upload">
-                <input type="hidden" name="baiThi_id" id="tpl-btid">
-                <div class="row" style="gap:10px; align-items:center">
-                    <label>Tệp .xlsx</label>
-                    <input type="file" name="template_file" id="tpl-file" accept=".xlsx" required
-                        style="background:#0b1220;color:#e5e7eb;border:1px solid #243045;border-radius:8px;padding:8px 10px">
-                    <button class="btn" type="submit">Tải lên & Lưu</button>
-                </div>
-                <div class="muted" style="margin-top:8px;font-size:12px">
-                    Yêu cầu cột: <em>Section/Mục lớn</em>, <em>Item/Mục nhỏ</em>, <em>Điểm/Max</em> (có thể thêm Ghi
-                    chú).
-                </div>
-            </form>
-        </div>
+        <form id="tpl-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="config_template_upload">
+            <input type="hidden" name="baiThi_id" id="tpl-btid">
+            <div class="row" style="gap:10px; align-items:center">
+                <label>Tệp .xlsx</label>
+                <input type="file" name="template_file" id="tpl-file" accept=".xlsx" required
+                    style="background:#0b1220;color:#e5e7eb;border:1px solid #243045;border-radius:8px;padding:8px 10px">
+                <button class="btn" type="submit">Tải lên & Lưu</button>
+            </div>
+            <div class="muted" style="margin-top:8px;font-size:12px">
+                Yêu cầu cột: <em>Section/Mục lớn</em>, <em>Item/Mục nhỏ</em>, <em>Điểm/Max</em> (có thể thêm Ghi
+                chú).
+            </div>
+        </form>
     </div>
+</div>
 <!-- MODAL xem cấu hình đã thêm -->
-<div id="tpl-view-modal"
-     class="modal-overlay"
-     style="display:none; position:fixed; inset:0; background:#0009; z-index:1000;">
-  <div class="card modal-card">
-    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-      <div class="sec-title">Cấu hình đã thêm</div>
-      <button id="tplv-close" class="btn btn-sm" type="button">Đóng</button>
-    </div>
-
-    <div class="modal-body">
-      <!-- giữ nguyên id để JS hiện nội dung -->
-      <div id="tplv-content">
-        <!-- bọc bảng render vào scroll-box để cuộn -->
-        <div class="scroll-box">
-          <!-- bảng sẽ được JS nhét vào đây như trước -->
+<div id="tpl-view-modal" class="modal-overlay"
+    style="display:none; position:fixed; inset:0; background:#0009; z-index:1000;">
+    <div class="card modal-card">
+        <div class="modal-header"
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div class="sec-title">Cấu hình đã thêm</div>
+            <button id="tplv-close" class="btn btn-sm" type="button">Đóng</button>
         </div>
-      </div>
+
+        <div class="modal-body">
+            <!-- giữ nguyên id để JS hiện nội dung -->
+            <div id="tplv-content">
+                <!-- bọc bảng render vào scroll-box để cuộn -->
+                <div class="scroll-box">
+                    <!-- bảng sẽ được JS nhét vào đây như trước -->
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- MODAL: Xem giám khảo chấm -->
-<div id="judge-view-modal"
-     class="modal-overlay"
-     style="display:none; position:fixed; inset:0; background:#0b1220cc; z-index:1000;">
-  <div class="card modal-card" style="width:600px; max-width:60vw;">
-    <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px;">
-      <div id="judgev-title" class="sec-title">Giám khảo chấm</div>
-      <button id="judgev-close" class="btn btn-sm" type="button">Đóng</button>
-    </div>
+<div id="judge-view-modal" class="modal-overlay"
+    style="display:none; position:fixed; inset:0; background:#0b1220cc; z-index:1000;">
+    <div class="card modal-card" style="width:600px; max-width:60vw;">
+        <div class="modal-header"
+            style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding-bottom:8px;">
+            <div id="judgev-title" class="sec-title">Giám khảo chấm</div>
+            <button id="judgev-close" class="btn btn-sm" type="button">Đóng</button>
+        </div>
 
-    <div class="modal-body">
-      <!-- Giới hạn phần nội dung để cuộn dọc khi danh sách dài -->
-      <div id="judgev-content"></div>
+        <div class="modal-body">
+            <!-- Giới hạn phần nội dung để cuộn dọc khi danh sách dài -->
+            <div id="judgev-content"></div>
+        </div>
     </div>
-  </div>
 </div>
 
 <!-- MODAL XÓA VÒNG THI -->
-<div id="delete-vt-modal"
-     style="display:none; position:fixed; inset:0; background:#0008; z-index:2000;
+<div id="delete-vt-modal" style="display:none; position:fixed; inset:0; background:#0008; z-index:2000;
             align-items:center; justify-content:center;">
-  <div style="background:#111827; padding:24px 24px 18px; border-radius:14px; width:360px;
+    <div style="background:#111827; padding:24px 24px 18px; border-radius:14px; width:360px;
               border:1px solid #243045;">
-    <div style="font-size:18px; font-weight:600; margin-bottom:12px; text-align:center;">
-      Xóa vòng thi
+        <div style="font-size:18px; font-weight:600; margin-bottom:12px; text-align:center;">
+            Xóa vòng thi
+        </div>
+        <div id="delete-vt-message"
+            style="margin-bottom:24px; font-size:14px; color:#e5e7eb; text-align:center; line-height:1.5;">
+            Bạn có muốn xóa vòng thi?
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button id="delete-vt-cancel" class="btn" type="button" style="background:#374151; color:#fff;">
+                Hủy
+            </button>
+            <button id="delete-vt-ok" class="btn" type="button" style="background:#dc2626; color:#fff;">
+                Đồng ý
+            </button>
+        </div>
     </div>
-    <div id="delete-vt-message"
-         style="margin-bottom:24px; font-size:14px; color:#e5e7eb; text-align:center; line-height:1.5;">
-      Bạn có muốn xóa vòng thi?
-    </div>
-    <div style="display:flex; justify-content:flex-end; gap:10px;">
-      <button id="delete-vt-cancel"
-              class="btn"
-              type="button"
-              style="background:#374151; color:#fff;">
-        Hủy
-      </button>
-      <button id="delete-vt-ok"
-              class="btn"
-              type="button"
-              style="background:#dc2626; color:#fff;">
-        Đồng ý
-      </button>
-    </div>
-  </div>
 </div>
 
 <!-- MODAL XÓA BÀI THI -->
-<div id="delete-bt-modal"
-     style="display:none; position:fixed; inset:0; background:#0008; z-index:2000;
+<div id="delete-bt-modal" style="display:none; position:fixed; inset:0; background:#0008; z-index:2000;
             align-items:center; justify-content:center;">
-  <div style="background:#111827; padding:20px; border-radius:12px; width:360px;
+    <div style="background:#111827; padding:20px; border-radius:12px; width:360px;
               border:1px solid #243045; text-align:center;">
-      
-    <div style="font-size:18px; font-weight:600; margin-bottom:12px;">
-      Xóa bài thi
-    </div>
 
-    <div id="delete-bt-message" style="margin-bottom:20px; font-size:14px; color:#e5e7eb;">
-      Bạn có muốn xóa bài thi?
-    </div>
+        <div style="font-size:18px; font-weight:600; margin-bottom:12px;">
+            Xóa bài thi
+        </div>
 
-    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 8px;">
-      <button id="delete-bt-cancel"
-            class="btn"
-            type="button"
-            style="background:#374151; color:#fff;">
-            Hủy
-      </button>
+        <div id="delete-bt-message" style="margin-bottom:20px; font-size:14px; color:#e5e7eb;">
+            Bạn có muốn xóa bài thi?
+        </div>
 
-      <button id="delete-bt-ok"
-              class="btn"
-              type="button"
-              style="background:#dc2626; color:#fff;">
-        Đồng ý
-      </button>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 8px;">
+            <button id="delete-bt-cancel" class="btn" type="button" style="background:#374151; color:#fff;">
+                Hủy
+            </button>
+
+            <button id="delete-bt-ok" class="btn" type="button" style="background:#dc2626; color:#fff;">
+                Đồng ý
+            </button>
+        </div>
     </div>
-  </div>
 </div>
 <!-- MODAL XÁC NHẬN ĐỔI TÊN (dùng chung openConfirm trong organize.js) -->
-<div id="confirmModal"
-     class="modal-overlay"
-     style="display:none; position:fixed; inset:0; background:#0008; z-index:2100;">
-  <div class="modal">
-    <h4>Xác nhận</h4>
-    <p id="confirmMessage">Bạn có chắc chắn muốn lưu thay đổi?</p>
-    <div class="modal-actions">
-      <button type="button"
-              id="confirmCancel"
-              class="btn"
-              style="background:#4b5563; color:#e5e7eb;">
-        Hủy
-      </button>
-      <button type="button"
-              id="confirmOk"
-              class="btn">
-        Đồng ý
-      </button>
+<div id="confirmModal" class="modal-overlay"
+    style="display:none; position:fixed; inset:0; background:#0008; z-index:2100;">
+    <div class="modal">
+        <h4>Xác nhận</h4>
+        <p id="confirmMessage">Bạn có chắc chắn muốn lưu thay đổi?</p>
+        <div class="modal-actions">
+            <button type="button" id="confirmCancel" class="btn" style="background:#4b5563; color:#e5e7eb;">
+                Hủy
+            </button>
+            <button type="button" id="confirmOk" class="btn">
+                Đồng ý
+            </button>
+        </div>
     </div>
-  </div>
 </div>
 
-    {{ judges_payload|json_script:"all-judges" }}
-    <script>
-        window.ALL_JUDGES = JSON.parse(document.getElementById('all-judges').textContent);
-    </script>
+{{ judges_payload|json_script:"all-judges" }}
+<script>
+    window.ALL_JUDGES = JSON.parse(document.getElementById('all-judges').textContent);
+</script>
 
-    <script src="{% static 'core/organize.js' %}?v={% now 'U' %}"></script>
+<script src="{% static 'core/organize.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

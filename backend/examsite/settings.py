@@ -22,15 +22,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key")
-DEBUG = os.environ.get("DEBUG", "0") == "1"
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True   # nếu bạn truy cập site qua https
-CSRF_COOKIE_SECURE = True      # nếu bạn truy cập site qua https
 
+# Mặc định bật DEBUG khi dev/local (có thể override bằng biến môi trường)
+DEBUG = os.environ.get("DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+# Không ép Django nghĩ là đang chạy qua HTTPS proxy khi bạn truy cập trực tiếp IP:8000
+SECURE_PROXY_SSL_HEADER = None
 
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "https://*.up.railway.app").split(",")
+# Dev/local dùng HTTP nên KHÔNG dùng secure cookies
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+# Cho phép truy cập từ localhost và IP máy bạn trong LAN
+ALLOWED_HOSTS = [
+    "*",
+    "localhost",
+    "127.0.0.1",
+    "192.168.1.3",
+]
+
+# Các origin được tin cậy cho CSRF (LAN + ngrok)
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.1.3:8000",
+    "http://192.168.1.3",
+    "http://localhost:8000",
+    "https://trish-unconceited-janine.ngrok-free.dev",
+]
+
 
 # Application definition
 
@@ -76,6 +94,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'examsite.wsgi.application'
 
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://trish-unconceited-janine.ngrok-free.dev",
+]
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
