@@ -158,6 +158,11 @@ class VongThi(models.Model):
     ma = models.CharField(max_length=10, editable=False)
     tenVongThi = models.CharField(max_length=200)
     cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE, related_name="vong_thi")
+    is_special_bonus_round = models.BooleanField(default=False)
+    special_bonus_score = models.PositiveIntegerField(
+        default=100,
+        help_text="Điểm cộng cho người thắng trong vòng đặc biệt (thua = 0)."
+    )
 
     def save(self, *args, **kwargs):
         if not self.ma:
@@ -166,6 +171,7 @@ class VongThi(models.Model):
 
     def __str__(self):
         return f"{self.ma} - {self.tenVongThi}"
+
 
 
 class BaiThi(models.Model):
@@ -295,6 +301,82 @@ class PhieuChamDiem(models.Model):
         # (TIME/TEMPLATE sẽ được quy đổi/validate ở bước 3B)
         self.updated_at = timezone.now()
         super().save(*args, **kwargs)
+        
+class SpecialRoundPair(models.Model):
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE)
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Cặp đặc biệt - {self.id}"
+class SpecialRoundPairMember(models.Model):
+    pair = models.ForeignKey(SpecialRoundPair, on_delete=models.CASCADE, related_name="members")
+    thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE)
+    side = models.CharField(max_length=1)     # L hoặc R
+    slot = models.PositiveSmallIntegerField() # 1 hoặc 2
+
+    class Meta:
+        unique_together = ("pair", "slot")
+
+    def __str__(self):
+        return f"{self.thiSinh} - {self.side}"
+class BonusCompareLog(models.Model):
+    special_pair = models.ForeignKey(SpecialRoundPair, on_delete=models.CASCADE, null=True, blank=True)
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE)
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
+    baiThi = models.ForeignKey(BaiThi, on_delete=models.CASCADE)
+    giamKhao = models.ForeignKey(GiamKhao, on_delete=models.CASCADE)
+    thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE)
+
+    raw_score = models.FloatField(default=0)
+    raw_time = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("special_pair", "baiThi", "giamKhao", "thiSinh")
+class SpecialRoundScoreLog(models.Model):
+    """
+    Log điểm raw cho vòng đặc biệt (trước khi đổi sang 100/0).
+    Mỗi dòng = 1 thí sinh trong 1 cặp, 1 bài thi, 1 giám khảo.
+    """
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE)
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
+    baiThi = models.ForeignKey(BaiThi, on_delete=models.CASCADE)
+
+    pair_member = models.ForeignKey(
+        SpecialRoundPairMember,
+        on_delete=models.CASCADE,
+        related_name="score_logs",
+    )
+
+    giamKhao = models.ForeignKey(
+        GiamKhao,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+
+    raw_score = models.FloatField()
+    raw_time = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Thời gian (giây) nếu có.",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Special round raw score log"
+        verbose_name_plural = "Special round raw score logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        ts = getattr(self.pair_member.thiSinh, "maNV", self.pair_member.thiSinh_id)
+        pair_id = getattr(self.pair_member.pair, "id", None)
+        return f"{ts} – {self.raw_score}đ (cặp {pair_id})"
+
+
 
 class CapThiDau(models.Model):
     """

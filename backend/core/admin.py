@@ -1,9 +1,45 @@
 from django.contrib import admin
 from django.utils.html import mark_safe
 from .models import (
-    ThiSinh, GiamKhao, CuocThi, VongThi, BaiThi, PhieuChamDiem,
-    BaiThiTemplateSection, BaiThiTemplateItem, CapThiDau, ThiSinhCapThiDau, BanGiamDoc, BattleVote
+    CuocThi,
+    VongThi,
+    BaiThi,
+    BaiThiTemplateSection,
+    BaiThiTemplateItem,
+    ThiSinh,
+    GiamKhao,
+    GiamKhaoBaiThi,
+    BanGiamDoc,
+    PhieuChamDiem,
+    CapThiDau,
+    ThiSinhCapThiDau,
+    SpecialRoundPair,
+    SpecialRoundPairMember,
+    BattleVote,
+    SpecialRoundScoreLog,
 )
+
+admin.site.register(SpecialRoundPair)
+@admin.register(SpecialRoundPairMember)
+class SpecialRoundPairMemberAdmin(admin.ModelAdmin):
+    list_display = ("thi_sinh_info", "pair_info", "side", "slot")
+    list_filter = ("pair__cuocThi", "pair__vongThi", "side")
+    search_fields = ("thiSinh__maNV", "thiSinh__hoTen", "pair__id")
+
+    def thi_sinh_info(self, obj):
+        try:
+            return f"{obj.thiSinh.maNV} - {obj.thiSinh.hoTen}"
+        except Exception:
+            return str(obj)
+    thi_sinh_info.short_description = "Thí sinh"
+
+    def pair_info(self, obj):
+        try:
+            return f"Cặp {obj.pair.id}"
+        except Exception:
+            return ""
+    pair_info.short_description = "Cặp"
+
 
 @admin.register(ThiSinh)
 class ThiSinhAdmin(admin.ModelAdmin):
@@ -140,3 +176,34 @@ class BattleVoteAdmin(admin.ModelAdmin):
             return ""
         return (obj.note[:40] + "…") if len(obj.note) > 40 else obj.note
     short_note.short_description = "Ghi chú"
+    
+    
+@admin.register(SpecialRoundScoreLog)
+class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "get_thi_sinh",
+        "get_pair_label",
+        "baiThi",
+        "giamKhao",
+        "raw_score",
+        "raw_time",
+        "created_at",
+    )
+    list_filter = (
+        "baiThi",
+        "giamKhao",
+        "vongThi",
+    )
+    search_fields = (
+        "pair_member__thiSinh__maNV",
+        "pair_member__thiSinh__hoTen",
+    )
+
+    def get_thi_sinh(self, obj):
+        return obj.pair_member.thiSinh
+    get_thi_sinh.short_description = "Thí sinh"
+    
+    def get_pair_label(self, obj):
+        return f"Cặp {obj.pair_member.pair_id}"
+    get_pair_label.short_description = "Cặp"
