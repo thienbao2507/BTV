@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.db.models import Avg
 from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
 from django.db.models import Q
-
+from django.core.cache import cache
 def _score_type(bt) -> str:
     v = getattr(bt, "phuongThucCham", None)
     if v is None:
@@ -13,6 +13,12 @@ def _score_type(bt) -> str:
     return "POINTS"
 
 def ranking_view(request):
+    # Fallback server-side: nếu tắt, render trang thông báo
+    if not cache.get("ranking_enabled", True):
+        return render(request, "ranking/disabled.html", {
+            "title": "Xếp hạng — đang tắt",
+        })
+
     ct_id = request.GET.get("ct")
     # ===== Lọc theo tên & đơn vị (dùng nút trượt) =====
     ten = (request.GET.get("ten") or "").strip()

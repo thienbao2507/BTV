@@ -29,3 +29,71 @@ if (rankingWrapper) {
         }
     }, { passive: false });
 }
+// ========== RANKING TOGGLE + CSRF + CHẶN NHẢY TRANG TẠI MANAGEMENT ==========
+
+// Lấy CSRF cookie (Django)
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return null;
+}
+
+async function fetchRankingState() {
+  try{
+    const r = await fetch("/management/ranking-state", {credentials:"same-origin"});
+    const j = await r.json();
+    return !!j.enabled;
+  }catch(e){ return true; }
+}
+
+async function setRankingState(enabled) {
+  try{
+    const csrftoken = getCookie('csrftoken');
+    const r = await fetch("/management/ranking-state", {
+      method: "POST",
+      headers: {
+        "Content-Type":"application/json",
+        "X-CSRFToken": csrftoken || "",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      credentials:"same-origin",
+      body: JSON.stringify({enabled: !!enabled})
+    });
+    const j = await r.json();
+    return !!j.enabled;
+  }catch(e){ return enabled; }
+}
+
+(async () => {
+  const toggle = document.getElementById('toggleRanking');
+  const hint   = document.getElementById('rankingStateHint');
+  if (!toggle) return;
+
+  const syncHint = (on) => {
+    hint.textContent = on ? "Ranking đang MỞ — bấm để TẮT." : "Ranking đang TẮT — bấm để MỞ.";
+  };
+
+  const init = await fetchRankingState();
+  toggle.checked = init;
+  syncHint(init);
+
+  toggle.addEventListener('change', async () => {
+    const after = await setRankingState(toggle.checked);
+    toggle.checked = after;
+    syncHint(after);
+  });
+
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  const href = a.getAttribute('href') || '';
+  if (!/^\/ranking(\/|$|\?)/.test(href)) return;
+
+  const on = await fetchRankingState();
+  if (!on) {
+    e.preventDefault();   // không hiện alert
+  }
+}, {capture:true});
+
+})();

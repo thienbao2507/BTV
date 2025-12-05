@@ -94,3 +94,24 @@
         });
     }
 })();
+// ==== Global guard: chặn mọi đường dẫn /ranking khi đang TẮT (áp dụng toàn site)
+(function(){
+  async function fetchRankingState(){
+    try{
+      const r = await fetch("/management/ranking-state", {credentials:"same-origin"});
+      const j = await r.json();
+      return !!j.enabled;
+    }catch(e){ return true; }
+  }
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a) return;
+  const href = a.getAttribute('href') || '';
+  if (!/^\/ranking(\/|$|\?)/.test(href)) return;
+  const on = await fetchRankingState();
+  if (!on) {
+    e.preventDefault();   // im lặng
+  }
+}, {capture:true});
+
+})();

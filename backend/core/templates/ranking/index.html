@@ -3,536 +3,326 @@
 
 {% block head_extra %}
     <style>
-        :root {
-            --bg: #0b1020;
-            --fg: #e5e7eb;
-            --muted: #94a3b8;
-            --line: rgba(148, 163, 184, .10);
-            --panel: rgba(17, 24, 39, 0.55);
-            --panel-brd: rgba(148, 163, 184, 0.15);
-            --chip: #334155;
-            --code-bg: #0b1220;
-        }
+/* ========== VARIABLES ========== */
+:root {
+  --bg: #0b1020;
+  --fg: #e5e7eb;
+  --muted: #94a3b8;
+  --line: rgba(148, 163, 184, .10);
+  --panel: rgba(17, 24, 39, 0.55);
+  --panel-brd: rgba(148, 163, 184, 0.15);
+  --chip: #334155;
+  --code-bg: #0b1220;
 
-        html,
-        body {
-            height: 100%;
-        }
+  /* Sticky header (2 tầng) */
+  --head1-h: 56px;  /* hàng 1: Rank/Mã/Họ tên/Đơn vị/Đã hoàn thành + Vòng */
+  --head2-h: 44px;  /* hàng 2: tiêu đề từng bài test */
+    /* === sizing cho cột Vòng/Bài thi === */
+  --test-min: 100px;   /* trước bạn đang ~180px */
+  --test-max: 130px;   /* trước bạn đang ~220px */
+  --test-pad-y: 8px;   /* trước 14px */
+  --test-pad-x: 8px;   /* trước 16/14px */
+  --test-font: 12px;   /* trước 14px */
 
+  --vt-font: 13px;     /* label "Vòng 1…" nhỏ lại */
+  --info-name-w: 260px; /* HỌ TÊN rộng hơn để không bị "..." */
+  --info-unit-w: 110px; /* ĐƠN VỊ rộng hơn */
+  --info-code-w: 90px;  /* MÃ NV nhỉnh lên nhẹ */
 
-
-        /* Desktop: vừa trang & KHÔNG cuộn dọc */
-        @media (min-width: 1024px) {
-
-            html,
-            body {
-                overflow-y: hidden;
-            }
-
-            .container {
-                max-width: 92vw;
-                margin: 12px auto;
-                padding: 0 10px;
-            }
-
-            .panel {
-                padding: 10px;
-            }
-
-            .table-wrap {
-                margin-top: 6px;
-                border-radius: 12px;
-                overflow-x: hidden;
-                overflow-y: visible;
-                border: 1px solid var(--panel-brd);
-                box-shadow: 0 6px 18px rgba(2, 6, 23, .25);
-            }
-
-            .rank-table thead th,
-            .rank-table tbody td {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-                        /* Viền dọc cho TẤT CẢ ô tiêu đề cột */
-            .rank-table thead th {
-            border: 1px #767a89 solid ;
-            }
-/* Bỏ bo góc cho các ô tiêu đề tên Bài thi và tiêu đề Vòng */
-.rank-table thead th.col-test,
-.rank-table thead th.vt-group {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-.rank-table thead th.vt-group {
-    font-size: 14px; }
-
-
-            .rank-table th,
-            .rank-table td {
-                max-width: 180px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-        /* Cho tên bài thi / tiêu đề vòng được xuống dòng */
-        .rank-table thead th.col-test,
-        .rank-table thead th.col-group-total {
-            white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
-            line-height: 1.3;
-            font-size: 14px;
-        }
-
-        .rank-table thead th.col-test > div,
-        .rank-table thead th.col-group-total > div {
-            white-space: normal;
-            word-wrap: break-word;
-            word-break: break-word;
-        }
-
-
-
-            /* cột bài thi ở giữa: rộng hơn để đọc rõ tên vòng/đề */
-            th.col-test,
-            td.col-test {
-                min-width: 180px;
-                max-width: 220px;
-            }
-        }
-
-        /* Mobile: cho phép kéo ngang */
-        @media (max-width: 1023.98px) {
-            .container {
-                max-width: 100vw;
-                margin: 12px auto;
-                padding: 0 8px;
-            }
-
-            .table-wrap {
-                overflow-x: auto;
-            }
-
-            .rank-table thead th,
-            .rank-table tbody td {
-                padding: 12px 14px;
-                font-size: 14px;
-            }
-
-            th.col-test,
-            td.col-test {
-                min-width: 200px;
-            }
-        }
-
-        h1 {
-            font-size: 22px;
-            margin: 0 0 8px;
-            letter-spacing: .2px;
-        }
-
-        .subtitle {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--panel-brd);
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(2, 6, 23, .35), inset 0 1px 0 rgba(255, 255, 255, .04);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 12px;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        label {
-            color: var(--muted);
-            font-size: 14px;
-        }
-
-        select {
-            background: #111827;
-            color: var(--fg);
-            border: 1px solid #263040;
-            border-radius: 10px;
-            padding: 8px 10px;
-            min-width: 240px;
-            outline: none;
-            transition: border-color .15s ease, box-shadow .15s ease;
-            box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset;
-        }
-
-        select:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, .2);
-        }
-th.col-test, th.col-group-total, td.num {
-  text-align: center !important;
-  vertical-align: middle;
-}
-td.num { font-weight: 600; }
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 999px;
-            background: var(--chip);
-            border: 1px solid rgba(148, 163, 184, .25);
-            font-weight: 600;
-            font-size: 12px;
-        }
-
-        .code {
-            display: inline-block;
-            font-family: ui-monospace, Menlo, Consolas, monospace;
-            background: var(--code-bg);
-            border: 1px solid #1f2937;
-            padding: 2px 6px;
-            border-radius: 8px;
-            font-size: 12px;
-            letter-spacing: .2px;
-            color: #c7d2fe;
-        }
-
-        .table-wrap {
-            border-radius: 16px;
-            border: 1px solid var(--panel-brd);
-            box-shadow: 0 6px 18px rgba(2, 6, 23, .25);
-        }
-/* Tô màu phần nắp trên (ăn theo bo góc của .table-wrap) */
-.table-wrap {
-  position: relative;          /* tạo mốc cho ::before */
-  overflow: hidden;            /* để nắp bo theo khung */
-  border-radius: 12px;         /* đã có sẵn của bạn */
 }
 
-/* Dải nắp tô nền trùng màu header */
-.table-wrap::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 56px;                /* ~ chiều cao header; chỉnh 52–60 tùy thực tế */
-  background: linear-gradient(180deg, rgba(15, 23, 42, .95) 0%, rgba(15, 23, 42, .86) 100%);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  z-index: 0;                  /* nằm dưới các ô <th> */
+/* ========== PAGE LAYOUT ========== */
+html, body { height: 100%; }
+
+@media (min-width: 1024px) {
+  html, body { overflow-y: hidden; }
 }
 
-/* đảm bảo header nằm trên lớp nắp */
-.rank-table thead th {
-  position: sticky;
-  z-index: 1;
+.container {
+  max-width: 92vw;
+  margin: 12px auto;
+  padding: 0 10px;
 }
 
-        /* ===== Rank table */
-        .rank-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: linear-gradient(180deg, #ffffff10, #ffffff05);
-            table-layout: fixed;
-        }
+h1 { font-size: 22px; margin: 0 0 8px; letter-spacing: .2px; }
+.subtitle { color: var(--muted); font-size: 14px; }
 
-        .rank-table thead th {
-            position: sticky;
-            top: 0;
-            text-align: center;
-            padding: 14px 16px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #fff;
-            border-bottom: 1px solid #fff3;
-            background: linear-gradient(180deg, rgba(15, 23, 42, .95) 0%, rgba(15, 23, 42, .86) 100%);
-            z-index: 2;
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
-
-        .rank-table tbody td {
-            padding: 14px 16px;
-            font-size: 14px;
-            color: #f0f0ff;
-            border-bottom: 1px dashed #fff3;
-            text-align: left;
-        }
-
-        .rank-table tbody tr:last-child td {
-            border-bottom: 0
-        }
-
-        .rank-table tbody tr:hover {
-            background: #ffffff14
-        }
-
-        /* Bo góc */
-        .rank-table thead th:first-child {
-            border-top-left-radius: 12px;
-        }
-
-        .rank-table thead th:last-child {
-            border-top-right-radius: 12px;
-        }
-
-        .rank-table tbody tr:last-child td:first-child {
-            border-bottom-left-radius: 12px;
-        }
-
-        .rank-table tbody tr:last-child td:last-child {
-            border-bottom-right-radius: 12px;
-        }
-
-        /* Top 1/2/3 */
-        .rank-table tbody tr.rank-1 td:first-child,
-        .rank-table tbody tr.top--1 td:first-child,
-        .rank-table tbody tr.rank-2 td:first-child,
-        .rank-table tbody tr.top--2 td:first-child,
-        .rank-table tbody tr.rank-3 td:first-child,
-        .rank-table tbody tr.top--3 td:first-child {
-            border-left-width: 10px;
-            border-left-style: solid;
-            border-top-left-radius: 12px;
-            border-bottom-left-radius: 12px;
-            padding-left: 14px;
-            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.25);
-        }
-
-        .rank-table tbody tr.rank-1 td:first-child,
-        .rank-table tbody tr.top--1 td:first-child {
-            border-left-color: #FFD700;
-        }
-
-        .rank-table tbody tr.rank-2 td:first-child,
-        .rank-table tbody tr.top--2 td:first-child {
-            border-left-color: #C0C0C0;
-        }
-
-        .rank-table tbody tr.rank-3 td:first-child,
-        .rank-table tbody tr.top--3 td:first-child {
-            border-left-color: #CD7F32;
-        }
-
-        .rank-table tbody tr.rank-1,
-        .rank-table tbody tr.top--1 {
-            background: linear-gradient(90deg, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0.1));
-        }
-
-        .rank-table tbody tr.rank-2,
-        .rank-table tbody tr.top--2 {
-            background: linear-gradient(90deg, rgba(192, 192, 192, 0.5), rgba(192, 192, 192, 0.1));
-        }
-
-        .rank-table tbody tr.rank-3,
-        .rank-table tbody tr.top--3 {
-            background: linear-gradient(90deg, rgba(205, 127, 50, 0.5), rgba(205, 127, 50, 0.1));
-        }
-
-
-        .rank-table tbody tr.rank-1 td:nth-child(3)::before,
-        .rank-table tbody tr.top--1 td:nth-child(3)::before {
-            color: #FFD700;
-        }
-
-        .rank-table tbody tr.rank-2 td:nth-child(3)::before,
-        .rank-table tbody tr.top--2 td:nth-child(3)::before {
-            color: #e4e4e4;
-        }
-
-        .rank-table tbody tr.rank-3 td:nth-child(3)::before,
-        .rank-table tbody tr.top--3 td:nth-child(3)::before {
-            color: #CD7F32;
-        }
-
-        td.num {
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-
-        td.total {
-            font-weight: 700;
-        }
-
-        th.col-rank,
-        td.col-rank {
-            width: 40px;
-                max-width: 40px;
-            text-align: center;
-        }
-        .rank-table thead th:nth-child(2),
-        .rank-table tbody td:nth-child(2) {
-            width: 80px;
-            max-width: 80px;   /* tránh bị rule khác ép rộng hơn */
-            text-align: center;
-        }
-        /* Họ tên rộng hơn */
-        .rank-table thead th:nth-child(3),
-        .rank-table tbody td:nth-child(3) {
-            width: 200px;       /* bạn có thể tăng/giảm 320–380 tùy ý */
-            max-width: 200px;
-        }
-
-        /* Đơn vị: cố định như các cột mã / họ tên */
-        .rank-table thead th:nth-child(4),
-        .rank-table tbody td:nth-child(4) {
-            width: 70px;      /* chỉnh 200–260 tùy layout */
-            max-width: 70px;
-        }
-        /* Tổng điểm: chỉnh chiều rộng cột Tổng */
-.rank-table thead th.col-total,
-.rank-table tbody td.col-total {
-    width: 70px;    /* chỉnh theo ý: 80, 100, 140... */
-    max-width: 70px;
-    text-align: center;     /* hoặc center nếu bạn muốn */
+/* ========== PANEL (khung kính) ========== */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-brd);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .35), inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 12px;
 }
 
-        .page-indicator {
-            margin-top: 10px;
-            font-size: 12px;
-            color: var(--muted);
-        }
-        /* Zebra cho các hạng ngoài Top 1/2/3: xen kẽ đậm/nhạt hơn một chút */
-.rank-table tbody tr:not(.top--1):not(.top--2):not(.top--3):nth-child(odd) {
-  background: rgba(255, 255, 255, 0.267);
-}
-.rank-table tbody tr:not(.top--1):not(.top--2):not(.top--3):nth-child(even) {
-  background: rgba(255, 255, 255, 0.122);
-}
-.page-header{
-  display:flex; align-items:center; gap:14px; 
-}
-
-.page-header{
-  display:flex;
-  flex-direction: column;      /* <-- xếp dọc: link trên, title dưới */
-  align-items: flex-start;     /* căn trái */
-  gap:6px;
+/* ========== CONTROLS (filter, select, input, switch) ========== */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 
-.back-link{
-  display:inline-flex; align-items:center; gap:6px;
-  color:#fff;
-  font-weight:700;
-  font-size:18px;              /* to hơn xíu */
-  text-decoration: none !important;  /* bỏ gạch chân */
-  line-height: 1;
+label { color: var(--muted); font-size: 14px; }
+
+select,
+input[type="text"]{
+  background: #111827;
+  color: var(--fg);
+  border: 1px solid #263040;
+  border-radius: 10px;
+  padding: 8px 10px;
+  outline: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
-.back-link:hover{ text-decoration: underline; }
 
-.back-link svg{ width:18px; height:18px; }
+select { min-width: 240px; }
+input[type="text"]{ min-width: 180px; }
 
-.page-title{ margin:0; font-size:20px; line-height:1.2; }
-/* Làm nổi cột Đã hoàn thành */
+select:focus,
+input[type="text"]:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+}
+
+/* Toggle “Lọc theo Tên/Đơn vị” */
+.filter-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; font-size: 13px; color: var(--muted); }
+.filter-toggle-label { font-weight: 500; }
+.filter-toggle-state {
+  font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(148,163,184,.15); color: #e5e7eb;
+}
+.switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-toggle {
+  position: absolute; inset: 0; cursor: pointer;
+  background: #1f2937; border-radius: 999px; border: 1px solid #4b5563;
+  transition: background .15s ease, border-color .15s ease;
+}
+.slider-toggle::before {
+  content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 50%;
+  transform: translateY(-50%); background: #9ca3af; border-radius: 50%;
+  transition: transform .15s ease, background .15s ease;
+}
+.switch input:checked + .slider-toggle {
+  background: linear-gradient(135deg, #3b82f6, #2563eb); border-color: #3b82f6;
+}
+.switch input:checked + .slider-toggle::before {
+  transform: translate(19px, -50%); background: #fff;
+}
+
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  background: var(--chip); border: 1px solid rgba(148, 163, 184, .25);
+  font-weight: 600; font-size: 12px;
+}
+.code {
+  display: inline-block; font-family: ui-monospace, Menlo, Consolas, monospace;
+  background: var(--code-bg); border: 1px solid #1f2937; padding: 2px 6px; border-radius: 8px;
+  font-size: 12px; letter-spacing: .2px; color: #c7d2fe;
+}
+
+/* ========== TABLE WRAPPER (nắp header + bo góc) ========== */
+.table-wrap {
+  position: relative;
+  margin-top: 6px;
+  border-radius: 12px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  border: 1px solid var(--panel-brd);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, .25);
+}
+/* Nắp nền bám theo chiều cao hàng 1 */
+.table-wrap::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0;
+  height: var(--head1-h);
+  background: linear-gradient(180deg, rgba(15, 23, 42, .95) 0%, rgba(15, 23, 42, .86) 100%);
+  border-top-left-radius: 12px; border-top-right-radius: 12px;
+  z-index: 0;
+}
+
+/* ========== RANK TABLE ========== */
+.rank-table {
+  width: 100%;
+  border-collapse: separate; border-spacing: 0;
+  table-layout: fixed;
+  background: linear-gradient(180deg, #ffffff10, #ffffff05);
+}
+
+/* Header chung */
+.rank-table thead th {
+  position: sticky;
+  text-align: center;
+  padding: 14px 16px;
+  font-weight: 700;
+  color: #fff;
+  border-bottom: 1px solid #fff3;
+  background: linear-gradient(180deg, rgba(15, 23, 42, .95) 0%, rgba(15, 23, 42, .86) 100%);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  /* viền dọc cho toàn bộ ô tiêu đề */
+  border-left: 1px solid #767a89;
+  border-right: 1px solid #767a89;
+}
+
+/* Sticky 2 tầng không đè nhau */
+.rank-table thead tr:nth-child(1) th {
+  top: 0;
+  height: var(--head1-h);
+  z-index: 4;
+}
+.rank-table thead tr:nth-child(1) th[rowspan="2"] { z-index: 5; }
+.rank-table thead tr:nth-child(2) th {
+  top: var(--head1-h);
+  height: var(--head2-h);
+  z-index: 3;
+}
+
+/* Bo góc phần đầu bảng (chỉ hàng 1) */
+.rank-table thead tr:nth-child(1) th:first-child { border-top-left-radius: 12px; }
+.rank-table thead tr:nth-child(1) th:last-child  { border-top-right-radius: 12px; }
+
+/* Tên bài thi / tiêu đề nhóm tổng có thể xuống dòng */
+.rank-table thead th.col-test,
+.rank-table thead th.col-group-total {
+  white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.3;
+  font-size: 14px;
+}
+/* Bỏ bo góc cho ô tiêu đề bài thi và tiêu đề vòng */
+.rank-table thead th.col-test,
+.rank-table thead th.vt-group {
+  border-radius: 0 !important;
+}
+/* Nhãn “Vòng …” hơi to hơn một xíu */
+.rank-table thead th.vt-group { font-size: 14px; }
+
+/* Body */
+.rank-table tbody td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #f0f0ff;
+  border-bottom: 1px dashed #fff3;
+  text-align: left;
+}
+.rank-table tbody tr:last-child td { border-bottom: 0; }
+.rank-table tbody tr:hover { background: #ffffff14; }
+
+/* Zebra (ngoài Top 1/2/3) */
+.rank-table tbody tr:not(.top--1):not(.top--2):not(.top--3):nth-child(odd)  { background: rgba(255,255,255,.267); }
+.rank-table tbody tr:not(.top--1):not(.top--2):not(.top--3):nth-child(even) { background: rgba(255,255,255,.122); }
+
+/* Bo góc đáy bảng */
+.rank-table tbody tr:last-child td:first-child  { border-bottom-left-radius: 12px; }
+.rank-table tbody tr:last-child td:last-child   { border-bottom-right-radius: 12px; }
+
+/* Các cột & căn lề */
+th.col-rank, td.col-rank { width: 70px; max-width: 70px;text-align: center; }
+.rank-table thead th:nth-child(2), .rank-table tbody td:nth-child(2) { width: 80px;  max-width: 80px;  text-align: center; }
+.rank-table thead th:nth-child(3), .rank-table tbody td:nth-child(3) { width: 200px; max-width: 200px; } /* Họ tên */
+.rank-table thead th:nth-child(4), .rank-table tbody td:nth-child(4) { width: 70px;  max-width: 70px; }  /* Đơn vị */
+th.col-test, td.col-test, td.num { text-align: center !important; vertical-align: middle; }
+td.num { font-weight: 600; }
+.rank-table thead th.col-total, .rank-table tbody td.col-total {
+  width: 70px; max-width: 70px; text-align: center;
+}
+
+/* Cột “Đã hoàn thành” nổi bật + xuống dòng */
 .rank-table thead th.col-done,
 .rank-table tbody td.col-done {
-  background: rgba(148, 163, 184, 0.22);  /* sáng hơn xung quanh một chút */
+  background: rgba(148,163,184,.22);
   width: 80px;
 }
-/* Cho "Đã hoàn thành" được xuống dòng khi cột hẹp */
 .rank-table thead th.col-done {
-  white-space: normal;      /* cho phép xuống dòng */
-  overflow: visible;        /* không cắt chữ */
-  text-overflow: clip;      /* bỏ dấu ... */
-  line-height: 1.3;
-  word-wrap: break-word;
-  word-break: break-word;
+  white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.3;
 }
-.rank-table tbody td.col-done {
-  text-align: center !important;
-  font-weight: 700;
+.rank-table tbody td.col-done { text-align: center !important; font-weight: 700; }
+
+/* Top 1/2/3 */
+.rank-table tbody tr.rank-1 td:first-child,
+.rank-table tbody tr.top--1 td:first-child,
+.rank-table tbody tr.rank-2 td:first-child,
+.rank-table tbody tr.top--2 td:first-child,
+.rank-table tbody tr.rank-3 td:first-child,
+.rank-table tbody tr.top--3 td:first-child {
+  border-left-width: 10px; border-left-style: solid;
+  border-top-left-radius: 12px; border-bottom-left-radius: 12px;
+  padding-left: 14px; box-shadow: inset 0 0 12px rgba(0,0,0,.25);
 }
-        input[type="text"]{
-            background: #111827;
-            color: var(--fg);
-            border: 1px solid #263040;
-            border-radius: 10px;
-            padding: 8px 10px;
-            min-width: 180px;
-            outline: none;
-            transition: border-color .15s ease, box-shadow .15s ease;
-            box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset;
-        }
-        input[type="text"]:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, .2);
-        }
+.rank-table tbody tr.rank-1 td:first-child,
+.rank-table tbody tr.top--1 td:first-child { border-left-color: #FFD700; }
+.rank-table tbody tr.rank-2 td:first-child,
+.rank-table tbody tr.top--2 td:first-child { border-left-color: #C0C0C0; }
+.rank-table tbody tr.rank-3 td:first-child,
+.rank-table tbody tr.top--3 td:first-child { border-left-color: #CD7F32; }
 
-        .filter-toggle {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-left: 8px;
-            font-size: 13px;
-            color: var(--muted);
-        }
+.rank-table tbody tr.rank-1,
+.rank-table tbody tr.top--1 { background: linear-gradient(90deg, rgba(255,215,0,.5),  rgba(255,215,0,.1)); }
+.rank-table tbody tr.rank-2,
+.rank-table tbody tr.top--2 { background: linear-gradient(90deg, rgba(192,192,192,.5), rgba(192,192,192,.1)); }
+.rank-table tbody tr.rank-3,
+.rank-table tbody tr.top--3 { background: linear-gradient(90deg, rgba(205,127,50,.5), rgba(205,127,50,.1)); }
 
-        .filter-toggle-label {
-            font-weight: 500;
-        }
+/* Header + cell của BÀI THI nhỏ lại */
+.rank-table thead th.col-test,
+.rank-table tbody td.col-test {
+  padding: var(--test-pad-y) var(--test-pad-x);
+  font-size: var(--test-font);
+  text-align: center;
+}
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 46px;
-            height: 24px;
-        }
+/* Trên desktop: giới hạn bề rộng cột bài thi */
+@media (min-width: 1024px){
+  th.col-test, td.col-test{
+    min-width: var(--test-min);
+    max-width: var(--test-max);
+  }
+}
 
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
+/* Nhãn Vòng (hàng 1) cũng gọn lại */
+.rank-table thead th.vt-group{
+  font-size: var(--vt-font);
+  padding: 10px 8px;
+}
 
-        .slider-toggle {
-            position: absolute;
-            cursor: pointer;
-            inset: 0;
-            background: #1f2937;
-            border-radius: 999px;
-            border: 1px solid #4b5563;
-            transition: background .15s ease, border-color .15s ease;
-        }
+/* ==== RỘNG HƠN CHO CỘT THÔNG TIN ==== */
+/* Mã NV */
+.rank-table thead th:nth-child(2),
+.rank-table tbody td:nth-child(2){
+  width: var(--info-code-w);
+  max-width: var(--info-code-w);
+  text-align: center;
+}
 
-        .slider-toggle::before {
-            content: "";
-            position: absolute;
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #9ca3af;
-            border-radius: 50%;
-            transition: transform .15s ease, background .15s ease;
-        }
+/* Họ tên */
+.rank-table thead th:nth-child(3),
+.rank-table tbody td:nth-child(3){
+  width: var(--info-name-w);
+  max-width: var(--info-name-w);
+}
 
-        .switch input:checked + .slider-toggle {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border-color: #3b82f6;
-        }
+/* Đơn vị */
+.rank-table thead th:nth-child(4),
+.rank-table tbody td:nth-child(4){
+  width: var(--info-unit-w);
+  max-width: var(--info-unit-w);
+}
 
-        .switch input:checked + .slider-toggle::before {
-            transform: translate(19px, -50%);
-            background: #fff;
-        }
+/* Tổng điểm giữ như cũ (70px), bạn có thể tăng nếu muốn */
 
-        .filter-toggle-state {
-            font-size: 12px;
-            padding: 2px 8px;
-            border-radius: 999px;
-            background: rgba(148, 163, 184, .15);
-            color: #e5e7eb;
-        }
 
+/* ========== PAGE EXTRAS ========== */
+.page-indicator { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+.page-header { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 10px; }
+.back-link { display: inline-flex; align-items: center; gap: 6px; color: #fff; font-weight: 700; font-size: 18px; text-decoration: none !important; line-height: 1; }
+.back-link:hover { text-decoration: underline; }
+.back-link svg { width: 18px; height: 18px; }
+.page-title { margin: 0; font-size: 20px; line-height: 1.2; }
 
     </style>
 {% endblock %}

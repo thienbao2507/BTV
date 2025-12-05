@@ -243,29 +243,17 @@ def bgd_qr_zip_all(request):
 
 
 def bgd_go(request, token: str):
+    """
+    Trước đây: tự động login + chuyển đến trang chấm điểm (score-bgd).
+    Yêu cầu mới: KHÔNG chuyển tới trang score nữa, mà mở một trang trắng.
+    """
+    # Nếu muốn vẫn kiểm tra token tồn tại (an toàn):
     bgd = BanGiamDoc.objects.filter(token=token).first()
     if not bgd:
         raise Http404("Token không hợp lệ")
 
-    # 1) Tự động login BGD như một Giám khảo
-    judge = _auto_login_bgd_as_judge(request, bgd)
-
-    # 2) Tìm cuộc thi "Chung Kết"
-    chung_ket = CuocThi.objects.filter(tenCuocThi__iexact="Chung Kết").first()
-    if not chung_ket:
-        # fallback: thử "Chung Ket"
-        chung_ket = CuocThi.objects.filter(tenCuocThi__iexact="Chung Ket").first()
-    if not chung_ket:
-        raise Http404("Chưa tạo cuộc thi 'Chung Kết'")
-
-    # 3) Ghi session để score_view hiểu đây là mode BGD chấm Chung Kết
-    request.session["bgd_token"] = token
-    request.session["bgd_ct_id"] = chung_ket.id
-    request.session["bgd_ct_name"] = chung_ket.tenCuocThi
-    request.session["bgd_mode"] = "score"
-    request.session.modified = True
-
-    return redirect("score-bgd")
+    # Trả về trang trắng (blank)
+    return HttpResponse("", content_type="text/html")
 
 
 

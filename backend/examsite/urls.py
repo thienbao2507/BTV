@@ -21,7 +21,7 @@ from core.views_auth import login_view, logout_view
 from core.views_organize import organize_view, competition_list_view    
 from core.views_score import score_view
 from core.views_ranking import ranking_view
-from core.views_management import management_view
+from core.views_management import management_view, ranking_state
 from core.views_export import export_page, export_xlsx
 from django.urls import path, include
 from core import views_score
@@ -66,6 +66,7 @@ urlpatterns = [
     path("battle/vote", submit_vote, name="battle_submit_vote"),
     path("export-final", export_final_page, name="export-final-page"),
     path("export-final-xlsx", export_final_xlsx, name="export-final-xlsx"),
+    path("management/ranking-state", ranking_state, name="ranking-state"),
     path("upload-avatars/", upload_avatars_view, name="upload-avatars"),
 ]
 
