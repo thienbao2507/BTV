@@ -108,7 +108,7 @@ def organize_view(request, ct_id=None):
                 return redirect(request.path)
 
             # --------------------------------------------------
-            # Bật/Tắt vòng thi đặc biệt (bonus 100/0)
+            # Bật/Tắt vòng thi đặc biệt (bonus 100/0, điểm cấu hình)
             # --------------------------------------------------
             if action == "toggle_vt_special":
                 vt_id = request.POST.get("vongThi_id")
@@ -122,15 +122,29 @@ def organize_view(request, ct_id=None):
                     messages.error(request, "Vòng thi không tồn tại.")
                     return redirect(request.path)
 
+                # Checkbox: có trong POST thì đang bật, không có thì tắt
                 new_state = (request.POST.get("is_special_bonus_round") == "on")
                 vt.is_special_bonus_round = new_state
-                vt.save(update_fields=["is_special_bonus_round"])
+
+                # Nếu có gửi kèm điểm thưởng thì lưu lại
+                raw_bonus = request.POST.get("special_bonus_score")
+                if raw_bonus:
+                    try:
+                        bonus_val = int(raw_bonus)
+                        if bonus_val > 0:
+                            vt.special_bonus_score = bonus_val
+                    except ValueError:
+                        # nhập linh tinh thì bỏ qua, giữ giá trị cũ
+                        pass
+
+                vt.save(update_fields=["is_special_bonus_round", "special_bonus_score"])
 
                 messages.success(
                     request,
                     f"Đã {'bật' if new_state else 'tắt'} chế độ vòng đặc biệt cho “{vt.tenVongThi}”."
                 )
                 return redirect(request.path)
+
 
             # --------------------------------------------------
             # Tạo cặp từ Top 20 vòng trước (vòng đặc biệt)

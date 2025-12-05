@@ -733,6 +733,16 @@
         gap: 6px;
         margin-left: auto;
     }
+    .bonus-input {
+    margin-left: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #020617;
+    color: #e5e7eb;
+    width: 80px;
+    font-size: 12px;
+}
 </style>
 {% endblock %}
 
@@ -806,17 +816,22 @@
                                 data-init="{{ vt.tenVongThi|escapejs }}">
                         </form>
 
-                        <!-- Vòng đặc biệt -->
+                                                <!-- Vòng đặc biệt -->
                         <form method="post" class="vt-special">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_vt_special">
                             <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
-                            <label class="switch">
-                                <input type="checkbox" name="is_special_bonus_round"
-                                    {% if vt.is_special_bonus_round %}checked{% endif %}
-                                    onchange="this.form.submit()">
+
+                            <label class="switch" title="Bật/tắt vòng đặc biệt">
+                                <input type="checkbox" name="is_special_bonus_round" {% if vt.is_special_bonus_round%}checked{% endif %} onchange="this.form.submit()">
                                 <span class="slider"></span>
                             </label>
+
+                            {% if vt.is_special_bonus_round %}
+                            <input type="number" name="special_bonus_score"
+                                value="{{ vt.special_bonus_score|default:100 }}" min="1" step="1" class="bonus-input"
+                                placeholder="Điểm thắng (vd: 100)">
+                            {% endif %}
                         </form>
 
                         <!-- Bắt đầu chia cặp -->
@@ -828,6 +843,7 @@
                             <button class="btn-split">Bắt đầu chia cặp</button>
                         </form>
                         {% endif %}
+
 
                         <!-- Nút xóa & collapse -->
                         <div class="vt-controls">

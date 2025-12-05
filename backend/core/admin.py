@@ -16,6 +16,7 @@ from .models import (
     SpecialRoundPair,
     SpecialRoundPairMember,
     BattleVote,
+    SpecialRoundScoreLog,
 )
 
 admin.site.register(SpecialRoundPair)
@@ -175,3 +176,34 @@ class BattleVoteAdmin(admin.ModelAdmin):
             return ""
         return (obj.note[:40] + "…") if len(obj.note) > 40 else obj.note
     short_note.short_description = "Ghi chú"
+    
+    
+@admin.register(SpecialRoundScoreLog)
+class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "get_thi_sinh",
+        "get_pair_label",
+        "baiThi",
+        "giamKhao",
+        "raw_score",
+        "raw_time",
+        "created_at",
+    )
+    list_filter = (
+        "baiThi",
+        "giamKhao",
+        "vongThi",
+    )
+    search_fields = (
+        "thiSinh__maNV",
+        "thiSinh__hoTen",
+    )
+
+    def get_thi_sinh(self, obj):
+        return obj.thiSinh
+    get_thi_sinh.short_description = "Thí sinh"
+
+    def get_pair_label(self, obj):
+        return f"Cặp {obj.pair_member.pair_id}"
+    get_pair_label.short_description = "Cặp"
