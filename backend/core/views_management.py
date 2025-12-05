@@ -3,6 +3,31 @@ from django.db.models import Avg, Count, Q
 from core.models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
 from core.decorators import judge_required
 from core.views_ranking import _score_type
+# --- thêm import ở đầu file
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.core.cache import cache
+import json
+
+RANKING_STATE_KEY = "ranking_enabled"  # True = mở, False = tắt
+
+@require_http_methods(["GET", "POST"])
+def ranking_state(request):
+    """
+    GET  -> {"enabled": true|false}
+    POST -> body JSON {"enabled": true|false} -> lưu và trả lại trạng thái
+    """
+    if request.method == "GET":
+        enabled = cache.get(RANKING_STATE_KEY, True)
+        return JsonResponse({"enabled": bool(enabled)})
+
+    try:
+        data = json.loads(request.body or "{}")
+    except Exception:
+        data = {}
+    enabled = bool(data.get("enabled", True))
+    cache.set(RANKING_STATE_KEY, enabled, None)
+    return JsonResponse({"enabled": enabled})
 
 @judge_required
 def management_view(request):
@@ -15,8 +40,6 @@ def management_view(request):
     else:
         ct = active_contests.first()
 
-    if not ct:
-        return render(request, "management/index.html", {"no_contest": True})
 
     if not ct:
         return render(request, "management/index.html", {"no_contest": True})
@@ -106,3 +129,22 @@ def management_view(request):
         "sr_pcts": sr_pcts,
         "active_contests": active_contests,
     })
+
+@judge_required
+@require_http_methods(["GET", "POST"])
+def ranking_state(request):
+    """
+    GET  -> {"enabled": true|false}
+    POST -> body JSON {"enabled": true|false} -> lưu và trả lại trạng thái
+    """
+    if request.method == "GET":
+        enabled = cache.get(RANKING_STATE_KEY, True)
+        return JsonResponse({"enabled": bool(enabled)})
+
+    try:
+        data = json.loads(request.body or "{}")
+    except Exception:
+        data = {}
+    enabled = bool(data.get("enabled", True))
+    cache.set(RANKING_STATE_KEY, enabled, None)
+    return JsonResponse({"enabled": enabled})

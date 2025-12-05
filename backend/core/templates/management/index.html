@@ -243,14 +243,28 @@
                                     <div class="text-2xl font-semibold leading-none">{{ total_thi_sinh }}</div>
                                 </div>
                             </div>
-                            <div class="glass p-5 flex items-center gap-4">
-                                <img src="{% static 'icons/processing.png' %}" alt="" class="h-10 w-10 opacity-90">
-                                <div>
-                                    <div class="text-sm opacity-70">Mục D: Đang phát triển</div>
-                                    <div class="text-2xl font-semibold leading-none">{% if metric_d %}{{ metric_d }}{%
-                                        else %}—{% endif %}</div>
-                                </div>
-                            </div>
+<!-- Ô bật/tắt RANKING (glass, đúng pattern Tailwind peer) -->
+<div class="glass p-5 flex items-center justify-between mt-4">
+  <div class="flex flex-col">
+    <div class="text-sm opacity-70">Trang Ranking</div>
+    <div id="rankingStateHint" class="text-xs opacity-75 mt-1"></div>
+  </div>
+
+  <label class="inline-flex items-center cursor-pointer">
+    <!-- peer: input phải đứng ngay trước track -->
+    <input id="toggleRanking" type="checkbox" class="sr-only peer">
+
+    <!-- Track: dùng after làm knob và dùng peer-checked để trượt -->
+    <div
+      class="relative w-12 h-7 rounded-full bg-gray-400 transition
+             peer-checked:bg-emerald-500
+             after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+             after:w-6 after:h-6 after:rounded-full after:bg-white after:transition-all
+             peer-checked:after:translate-x-5">
+    </div>
+  </label>
+</div>
+
                             <div class="glass p-5 flex items-center gap-4">
                                 <img src="{% static 'icons/processing.png' %}" alt="" class="h-10 w-10 opacity-90">
                                 <div>
@@ -303,6 +317,7 @@
                             class="mt-4 w-full bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg">Đóng</button>
                     </div>
                 </div>
+                
             </div> <!-- /Hàng trên + khu dưới -->
             {% endif %}
         </div>
