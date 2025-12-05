@@ -196,14 +196,14 @@ class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
         "vongThi",
     )
     search_fields = (
-        "thiSinh__maNV",
-        "thiSinh__hoTen",
+        "pair_member__thiSinh__maNV",
+        "pair_member__thiSinh__hoTen",
     )
 
     def get_thi_sinh(self, obj):
-        return obj.thiSinh
+        return obj.pair_member.thiSinh
     get_thi_sinh.short_description = "Thí sinh"
-
+    
     def get_pair_label(self, obj):
         return f"Cặp {obj.pair_member.pair_id}"
     get_pair_label.short_description = "Cặp"
