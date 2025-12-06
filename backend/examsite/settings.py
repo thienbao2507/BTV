@@ -96,10 +96,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'examsite.wsgi.application'
 
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://trish-unconceited-janine.ngrok-free.dev",
-]
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
