@@ -39,6 +39,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "192.168.1.3",
+    "bantayvang.up.railway.app",
 ]
 
 # Các origin được tin cậy cho CSRF (LAN + ngrok)
@@ -47,6 +48,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.1.3",
     "http://localhost:8000",
     "https://trish-unconceited-janine.ngrok-free.dev",
+    "https://bantayvang.up.railway.app",
 ]
 
 
