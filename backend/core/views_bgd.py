@@ -279,6 +279,17 @@ def bgd_go(request, token: str):
             .distinct()[:5]
         )
 
+        scores_qs = BGDScore.objects.filter(
+            bgd=bgd,
+            cuocThi=ct,
+            thiSinh__in=contestants,
+        )
+
+        scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
+
+        for ts in contestants:
+            ts.current_bgd_score = scores_by_ts.get(ts.pk)
+
     context = {
         "bgd": bgd,
         "judge": judge,
@@ -286,6 +297,7 @@ def bgd_go(request, token: str):
         "contestants": contestants,
     }
     return render(request, "bgd/go.html", context)
+
 
 
 def bgd_battle_go(request, token: str):
