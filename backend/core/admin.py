@@ -17,6 +17,7 @@ from .models import (
     SpecialRoundPairMember,
     BattleVote,
     SpecialRoundScoreLog,
+    BGDScore,
 )
 
 admin.site.register(SpecialRoundPair)
@@ -207,3 +208,10 @@ class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
     def get_pair_label(self, obj):
         return f"Cặp {obj.pair_member.pair_id}"
     get_pair_label.short_description = "Cặp"
+
+
+@admin.register(BGDScore)
+class BGDScoreAdmin(admin.ModelAdmin):
+    list_display = ("bgd", "cuocThi", "thiSinh", "diem", "created_at", "updated_at")
+    list_filter = ("cuocThi", "bgd")
+    search_fields = ("bgd__maBGD", "cuocThi__ma", "thiSinh__maNV", "thiSinh__hoTen")

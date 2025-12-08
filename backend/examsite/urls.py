@@ -26,7 +26,16 @@ from core.views_export import export_page, export_xlsx
 from django.urls import path, include
 from core import views_score
 from core.views_admin import import_view, upload_avatars_view
-from core.views_bgd import bgd_qr_index, bgd_qr_png, bgd_go, bgd_battle_go, score_bgd_view, bgd_qr_zip_all, bgd_list  # ADD
+from core.views_bgd import (
+    bgd_qr_index,
+    bgd_qr_png,
+    bgd_go,
+    bgd_battle_go,
+    score_bgd_view,
+    bgd_qr_zip_all,
+    bgd_list,
+    bgd_save_score,
+)
 from core.views_battle import battle_view, manage_battle_view, save_pairing, pairing_state, submit_vote, delete_pair
 from core.views_export import export_page, export_xlsx, export_final_page, export_final_xlsx
 from django.conf import settings
@@ -54,9 +63,11 @@ urlpatterns = [
     path("bgd/qr/<str:token>/", bgd_qr_index, name="bgd-qr-one"),
     path("bgd/qr/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
     path("bgd/go/<str:token>/", bgd_go, name="bgd-go"),
+    path("bgd/api/save-score/", bgd_save_score, name="bgd-save-score"),
     path("bgd/battle/<str:token>/", bgd_battle_go, name="bgd-battle-go"),
     path("score/bgd/", score_bgd_view, name="score-bgd"),
     path("bgd/qr-all.zip", bgd_qr_zip_all, name="bgd-qr-all"),
+
     path("battle/", battle_view, name="battle"),
     path("battle/manage/", manage_battle_view, name="manage-battle"),
 

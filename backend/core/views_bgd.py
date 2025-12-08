@@ -1,15 +1,18 @@
 # core/views_bgd.py
 from io import BytesIO
 import zipfile
+import json
 
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.conf import settings
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
-from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh
-
+from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore
 from .views_score import score_view  # tái dùng view chấm hiện có
+
 def _auto_login_bgd_as_judge(request, bgd):
     """
     Dựa vào mã & tên BGD để tìm bản ghi GiamKhao tương ứng,
@@ -300,6 +303,88 @@ def bgd_battle_go(request, token: str):
 
     return redirect("battle")
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def bgd_save_score(request):
+    """
+    API lưu điểm (0–10) cho BGD vào bảng BGDScore.
+    - Input JSON: { "thiSinh_id": <id>, "score": <số> }
+    - BGD lấy từ session["bgd_token"]
+    - Cuộc thi ưu tiên lấy từ session["bgd_ct_id"], fallback "Chung Kết"
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON")
+
+    ts_id = payload.get("thiSinh_id")
+    raw_score = payload.get("score")
+
+    if not ts_id or raw_score is None:
+        return JsonResponse(
+            {"ok": False, "message": "Thiếu thông tin thí sinh hoặc điểm."},
+            status=400,
+        )
+
+    try:
+        score_val = float(raw_score)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"ok": False, "message": "Điểm không hợp lệ."},
+            status=400,
+        )
+
+    if score_val < 0 or score_val > 100:
+        return JsonResponse(
+            {"ok": False, "message": "Điểm phải trong khoảng 0..100."},
+            status=400,
+        )
+
+    thi_sinh = ThiSinh.objects.filter(pk=ts_id).first()
+    if not thi_sinh:
+        return JsonResponse(
+            {"ok": False, "message": "Không tìm thấy thí sinh."},
+            status=404,
+        )
+
+    # Lấy BGD theo token đã lưu khi vào /bgd/go/<token>/
+    bgd_token = request.session.get("bgd_token")
+    bgd = BanGiamDoc.objects.filter(token=bgd_token).first()
+    if not bgd:
+        return JsonResponse(
+            {"ok": False, "message": "BGD chưa được xác định trong phiên làm việc."},
+            status=401,
+        )
+
+    # Lấy cuộc thi: ưu tiên từ session, fallback "Chung Kết"
+    ct = None
+    ct_id = request.session.get("bgd_ct_id")
+    if ct_id:
+        ct = CuocThi.objects.filter(pk=ct_id).first()
+    if not ct:
+        ct = (
+            CuocThi.objects.filter(tenCuocThi__iexact="Chung Kết").order_by("-id").first()
+            or CuocThi.objects.filter(tenCuocThi__iexact="Chung ket").order_by("-id").first()
+        )
+    if not ct:
+        return JsonResponse(
+            {"ok": False, "message": "Không xác định được cuộc thi Chung Kết."},
+            status=400,
+        )
+
+    diem_int = int(round(score_val))
+
+    obj, created = BGDScore.objects.update_or_create(
+        bgd=bgd,
+        cuocThi=ct,
+        thiSinh=thi_sinh,
+        defaults={"diem": diem_int},
+    )
+
+    return JsonResponse(
+        {"ok": True, "created": bool(created), "message": "Đã lưu điểm."}
+    )
 
 
 # --- 4) View chấm cho BGD: khóa vào "Chung Kết", tái dùng score_view ---

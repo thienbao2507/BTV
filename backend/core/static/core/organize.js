@@ -575,13 +575,20 @@ if (fileTemplate) {
       content.innerHTML = `
         <table class="table" style="width:100%; table-layout:fixed;">
           <colgroup>
-          <col style="width:80px"> 
+          <col style="width:120px"> 
           <col style="width:140px">
             <col>
           </colgroup>
           <thead>
             <tr>
-              <th style="text-align:center">Chọn</th>
+              <th style="text-align:center">
+                <button id="judge-select-all-btn"
+                        class="btn"
+                        type="button"
+                        style="padding:4px 10px; font-size:13px;">
+                  Chọn tất cả
+                </button>
+              </th>
               <th style="text-align:left">Mã NV</th>
               <th style="text-align:left">Tên giám khảo</th>
             </tr>
@@ -590,49 +597,60 @@ if (fileTemplate) {
         </table>
       `;
 
-      // After injecting rows, attach change handlers to checkboxes
-      (window.ALL_JUDGES || []).forEach((j) => {
-        const inputId = `chk-${btid}-${j.code}`;
-        const el = document.getElementById(inputId);
-        if (!el) return;
-        el.addEventListener('change', () => { dirty = true; });
+      const btnSelectAll = document.getElementById('judge-select-all-btn');
+      const itemCheckboxes = Array.from(
+        content.querySelectorAll('tbody input[type="checkbox"]')
+      );
+
+      itemCheckboxes.forEach(cb => cb.removeAttribute('disabled'));
+
+      function isAllChecked() {
+        return itemCheckboxes.length > 0 && itemCheckboxes.every(cb => cb.checked);
+      }
+
+      btnSelectAll?.addEventListener('click', () => {
+        const targetState = !isAllChecked();
+        itemCheckboxes.forEach(cb => { cb.checked = targetState; });
+        dirty = true;
       });
 
-      // Enable checkboxes (they are editable now) and ensure keyboard focus works
-      content.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.removeAttribute('disabled'));
+      itemCheckboxes.forEach(cb => {
+        cb.addEventListener('change', () => {
+          dirty = true;
+        });
+      });
 
-      // Set the close button to either save changes (if any) or just close
       closeBtn.onclick = async function () {
         if (!dirty) {
           modal.style.display = 'none';
           return;
         }
 
-        // build current selection
-        const checkedCodes = Array.from(content.querySelectorAll('tbody input[type="checkbox"]:checked'))
-          .map(cb => cb.closest('tr').querySelector('td:nth-child(2)').textContent.trim());
+        const checkedCodes = Array.from(
+          content.querySelectorAll('tbody input[type="checkbox"]:checked')
+        ).map(cb =>
+          cb.closest('tr').querySelector('td:nth-child(2)').textContent.trim()
+        );
 
         const initial = Array.from(set);
-        const same = initial.length === checkedCodes.length && initial.every(v => checkedCodes.includes(v));
+        const same = initial.length === checkedCodes.length &&
+          initial.every(v => checkedCodes.includes(v));
+
         if (same) {
           modal.style.display = 'none';
           return;
         }
 
-        // send update to server
-        // helper to read csrf token from cookie
+        // helper lấy csrf từ cookie
         function getCookie(name) {
           const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
           return v ? v.pop() : '';
         }
 
         try {
-          const payload = { baiThi_id: btid, judges: checkedCodes };
-          // send as form-encoded so server can read via request.POST reliably
           const formBody = new URLSearchParams();
           formBody.append('action', 'update_assignments');
           formBody.append('baiThi_id', String(btid));
-          // append judges as repeated fields
           checkedCodes.forEach(code => formBody.append('judges', code));
 
           const res = await fetch(window.location.pathname, {
@@ -659,21 +677,21 @@ if (fileTemplate) {
           alert('Lỗi khi cập nhật phân công: ' + e.message);
         }
       };
+
       modal.style.display = 'flex';
     }
 
-    // Xử lý sự kiện khi click vào button "Xem giám khảo chấm"
     document.body.addEventListener('click', (e) => {
       const btn = e.target.closest?.('[data-open-judge-view]');
       if (!btn) return;
       const btid = btn.getAttribute('data-btid');
       openJudgeModal(btid);
-      // Đóng menu nếu nó đang mở
+
       const kebabMenu = btn.closest('.kebab')?.querySelector('.kebab-menu');
       if (kebabMenu) kebabMenu.style.display = 'none';
     });
 
-    closeBtn?.addEventListener('click', () => modal.style.display = 'none');
+    closeBtn?.addEventListener('click', () => { modal.style.display = 'none'; });
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.style.display = 'none';
     });

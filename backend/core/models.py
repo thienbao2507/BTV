@@ -550,3 +550,16 @@ class BattleVote(models.Model):
         heart_flag = " ♥" if getattr(self, "heart", False) else ""
         return f"Vote {self.stars}★{heart_flag} - {gk} -> {ts} ({pair_code})"
 
+class BGDScore(models.Model):
+    bgd = models.ForeignKey(BanGiamDoc, on_delete=models.CASCADE, related_name="scores")
+    cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE, related_name="bgd_scores")
+    thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE, related_name="bgd_scores")
+    diem = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("bgd", "cuocThi", "thiSinh")
+
+    def __str__(self):
+        return f"{self.bgd.maBGD} - {self.cuocThi.ma} - {self.thiSinh.maNV}: {self.diem}"
