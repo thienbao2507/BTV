@@ -7,7 +7,8 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.conf import settings
 
-from .models import BanGiamDoc, CuocThi, GiamKhao
+from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh
+
 from .views_score import score_view  # tái dùng view chấm hiện có
 def _auto_login_bgd_as_judge(request, bgd):
     """
@@ -243,18 +244,45 @@ def bgd_qr_zip_all(request):
 
 
 def bgd_go(request, token: str):
-    """
-    Trước đây: tự động login + chuyển đến trang chấm điểm (score-bgd).
-    Yêu cầu mới: KHÔNG chuyển tới trang score nữa, mà mở một trang trắng.
-    """
-    # Nếu muốn vẫn kiểm tra token tồn tại (an toàn):
     bgd = BanGiamDoc.objects.filter(token=token).first()
     if not bgd:
         raise Http404("Token không hợp lệ")
 
-    # Trả về trang trắng (blank)
-    return HttpResponse("", content_type="text/html")
+    judge = _auto_login_bgd_as_judge(request, bgd)
 
+    ct = CuocThi.objects.filter(tenCuocThi__iexact="Chung Kết").order_by("-id").first()
+    if not ct:
+        ct = CuocThi.objects.filter(tenCuocThi__iexact="Chung ket").order_by("-id").first()
+    if not ct:
+        ct = CuocThi.objects.filter(trangThai=True).order_by("-id").first()
+
+    if ct:
+        request.session["bgd_mode"] = "score"
+        request.session["bgd_ct_id"] = ct.id
+        request.session["bgd_ct_name"] = ct.tenCuocThi
+    else:
+        request.session.pop("bgd_mode", None)
+        request.session.pop("bgd_ct_id", None)
+        request.session.pop("bgd_ct_name", None)
+
+    request.session["bgd_token"] = token
+    request.session.modified = True
+
+    contestants = []
+    if ct:
+        contestants = (
+            ThiSinh.objects.filter(tham_gia__cuocThi=ct)
+            .order_by("maNV")
+            .distinct()[:5]
+        )
+
+    context = {
+        "bgd": bgd,
+        "judge": judge,
+        "ct": ct,
+        "contestants": contestants,
+    }
+    return render(request, "bgd/go.html", context)
 
 
 def bgd_battle_go(request, token: str):
