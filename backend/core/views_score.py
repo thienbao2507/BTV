@@ -536,20 +536,31 @@ def score_view(request):
                 except Exception:
                     seconds = 0
 
-                # bonus theo rule; không match thì bonus = 0
-                bonus = 0
-                for r in bt.time_rules.all():
-                    if r.start_seconds <= seconds <= r.end_seconds:
-                        bonus = int(r.score)
-                        break
-                diem = min(20, 10 + bonus)   # tổng = 10 + bonus (kẹp 20)
+                # Xác định mốc cuối + 30 giây (ngưỡng cho phép) và mốc cuối + 10 phút (thời gian mặc định khi lố)
+                max_end = bt.time_rules.aggregate(max_end=Max("end_seconds"))["max_end"] or 0
+                allowed_max = max_end + 30          # mốc cuối + 30s: nếu vượt thì coi là lố
+                capped_time = max_end + 10 * 60     # mốc cuối + 10 phút: thời gian mặc định khi lố
+
+                if seconds > allowed_max:
+                    # Quá thời gian cho phép → coi như không hoàn thành: điểm = 0
+                    diem = 0
+                    stored_time = int(capped_time)
+                else:
+                    # bonus theo rule; không match thì bonus = 0
+                    bonus = 0
+                    for r in bt.time_rules.all():
+                        if r.start_seconds <= seconds <= r.end_seconds:
+                            bonus = int(r.score)
+                            break
+                    diem = min(20, 10 + bonus)   # tổng = 10 + bonus (kẹp 20)
+                    stored_time = int(seconds or 0)
 
                 obj, was_created = PhieuChamDiem.objects.update_or_create(
                     thiSinh=thi_sinh, baiThi=bt, cuocThi=ct,
                     defaults=dict(
                         vongThi=bt.vongThi,
                         diem=diem,
-                        thoiGian=seconds,
+                        thoiGian=stored_time,
                         giamKhao=judge
                     )
                 )
@@ -562,8 +573,9 @@ def score_view(request):
                     thi_sinh=thi_sinh,
                     judge=judge,
                     raw_total=diem,
-                    raw_time=int(seconds or 0),
+                    raw_time=stored_time,
                 )
+
 
         if errors:
             return JsonResponse({
