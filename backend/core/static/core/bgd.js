@@ -32,8 +32,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (track && slides.length > 0) {
         let current = 0;
+        let ignoreSwipe = false;
 
         function updateCarousel() {
+
             const offset = -current * 100;
             track.style.transform = "translateX(" + offset + "%)";
 
@@ -54,10 +56,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
         function onTouchStart(e) {
             if (!e.touches || e.touches.length === 0) return;
+
+            const target = e.target;
+            if (target.closest('input[data-role="score-slider"], input[data-role="score-input"]')) {
+                // Vuốt bắt đầu trên thanh điểm hoặc ô điểm -> không dùng cho carousel
+                ignoreSwipe = true;
+                startX = null;
+                return;
+            }
+
+            ignoreSwipe = false;
             startX = e.touches[0].clientX;
         }
 
+
         function onTouchEnd(e) {
+            if (ignoreSwipe) {
+                // Vuốt xuất phát từ slider / ô điểm -> không đổi thí sinh
+                ignoreSwipe = false;
+                startX = null;
+                return;
+            }
+
             if (startX === null) return;
             const touch = e.changedTouches && e.changedTouches[0];
             const endX = touch ? touch.clientX : startX;
@@ -74,6 +94,7 @@ document.addEventListener("DOMContentLoaded", function () {
             updateCarousel();
             startX = null;
         }
+
 
         const viewport = document.querySelector(".bgd-carousel") || track;
         viewport.addEventListener("touchstart", onTouchStart, { passive: true });
