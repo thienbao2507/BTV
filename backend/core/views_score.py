@@ -484,47 +484,53 @@ def score_view(request):
                 )
 
 
-
-
             # 2) TIME (chuẩn hóa theo yêu cầu)
             for bt in bai_qs:
                 if not _is_time(bt):
                     continue
                 btid = bt.id
                 has_input = (
-                    str(btid) in (done or {}) or btid in (done or {}) or
-                    str(btid) in (times or {}) or btid in (times or {})
+                    str(btid) in (done or {}) or btid in (done or {})
+                    or str(btid) in (times or {}) or btid in (times or {})
                 )
                 if not has_input:
                     continue
+
+                # Tính mốc thời gian
+                max_end = bt.time_rules.aggregate(max_end=Max("end_seconds"))["max_end"] or 0
+                allowed_max = max_end + 30          # mốc cuối + 30s: ngưỡng cho phép
+                capped_time = allowed_max + 1       # mốc cuối + 30s + 1s: thời gian mặc định khi không hoàn thành
+
+
                 is_done = bool(done.get(str(btid)) or done.get(btid))
 
                 if not is_done:
+                    # Không tick Hoàn thành → coi là không hoàn thành
+                    diem = 0
+                    stored_time = int(capped_time)
+
                     obj, was_created = PhieuChamDiem.objects.update_or_create(
                         thiSinh=thi_sinh, baiThi=bt, cuocThi=ct,
                         defaults=dict(
                             vongThi=bt.vongThi,
-                            diem=0,
-                            thoiGian=0,
+                            diem=diem,
+                            thoiGian=stored_time,
                             giamKhao=judge
                         )
                     )
                     created += int(was_created); updated += int(not was_created)
-                    saved_scores[btid] = 0
+                    saved_scores[btid] = diem
 
-                    # Thử áp dụng bonus nếu đây là vòng đặc biệt
                     _apply_special_round_bonus_if_ready(
                         bt=bt,
                         thi_sinh=thi_sinh,
                         judge=judge,
-                        raw_total=0,
-                        raw_time=0,
+                        raw_total=diem,
+                        raw_time=stored_time,
                     )
                     continue
 
-
                 # ĐANG TICK → LƯU thời gian + điểm
-                # Cho phép "00:00" (seconds = 0) là hợp lệ
                 raw_t = times.get(str(btid)) or times.get(btid)
                 seconds = _parse_seconds(raw_t)
                 if seconds is None or seconds < 0:
@@ -535,11 +541,6 @@ def score_view(request):
                     seconds = int(seconds or 0)
                 except Exception:
                     seconds = 0
-
-                # Xác định mốc cuối + 30 giây (ngưỡng cho phép) và mốc cuối + 10 phút (thời gian mặc định khi lố)
-                max_end = bt.time_rules.aggregate(max_end=Max("end_seconds"))["max_end"] or 0
-                allowed_max = max_end + 30          # mốc cuối + 30s: nếu vượt thì coi là lố
-                capped_time = max_end + 10 * 60     # mốc cuối + 10 phút: thời gian mặc định khi lố
 
                 if seconds > allowed_max:
                     # Quá thời gian cho phép → coi như không hoàn thành: điểm = 0
@@ -567,7 +568,6 @@ def score_view(request):
                 created += int(was_created); updated += int(not was_created)
                 saved_scores[btid] = diem
 
-                # Thử áp dụng bonus 100/0 cho vòng đặc biệt
                 _apply_special_round_bonus_if_ready(
                     bt=bt,
                     thi_sinh=thi_sinh,
@@ -575,6 +575,7 @@ def score_view(request):
                     raw_total=diem,
                     raw_time=stored_time,
                 )
+
 
 
         if errors:

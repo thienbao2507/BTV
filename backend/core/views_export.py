@@ -299,7 +299,8 @@ def export_page(request):
 # --- FINAL EXPORT (Chung Kết) ---
 from django.db.models import Avg, Sum
 from django.http import JsonResponse
-from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem, BattleVote
+from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem, BattleVote, BGDScore
+
 
 def _find_chung_ket():
     """
@@ -318,7 +319,8 @@ def _final_columns_and_rows(ct: CuocThi):
     - Cột điểm: Tổng điểm (vòng Chung kết), Đối kháng (sao TB, 1 số thập phân)
     """
     info_titles = ['STT', 'Mã NV', 'Họ tên', 'Đơn vị', 'Chi nhánh', 'Vùng', 'Nhóm', 'Email']
-    columns = info_titles + ['Tổng điểm', 'Đối kháng', 'Tim']   # NEW
+    columns = info_titles + ['Đối kháng', 'Tim','Soán ngôi','Tổng điểm']
+
 
 
     # 1) Xác định Vòng “Chung Kết” (nếu không tìm được thì lấy tất cả vòng của CT này)
@@ -366,17 +368,43 @@ def _final_columns_and_rows(ct: CuocThi):
     )
     hearts_by_ma = {r["entry__thiSinh__maNV"]: int(r["hearts"] or 0) for r in heart_qs}
 
+    # 4b) Soán ngôi: điểm trung bình BGDScore theo thí sinh cho cuộc thi này
+    bgd_qs = (
+        BGDScore.objects
+        .filter(cuocThi=ct)
+        .values("thiSinh__maNV")
+        .annotate(avg=Avg("diem"))
+    )
+    soan_by_ma = {
+        r["thiSinh__maNV"]: (float(r["avg"]) if r["avg"] is not None else None)
+        for r in bgd_qs
+    }
+
     # 5) Duyệt thí sinh của CT & build rows
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
+
 
     def _sv(x): return "" if x is None else str(x)
 
     rows = []
+    rows = []
     for idx, ts in enumerate(ts_qs, start=1):
-        tong = round(total_by_ma.get(ts.maNV, 0.0), 2)
+        # Tổng điểm từ phiếu chấm (các bài thi khác)
+        base_total = float(total_by_ma.get(ts.maNV, 0.0) or 0.0)
+
+        # Đối kháng
         sao = stars_by_ma.get(ts.maNV, None)
         sao_fmt = (f"{sao:.1f}" if sao is not None else "")
-        tim = hearts_by_ma.get(ts.maNV, 0)  # NEW
+
+        # Tim
+        tim = hearts_by_ma.get(ts.maNV, 0)
+
+        # Soán ngôi (AVG điểm BGD)
+        soan = soan_by_ma.get(ts.maNV, None)
+        soan_fmt = (f"{soan:.1f}" if soan is not None else "")
+
+        # Tổng điểm hiển thị = điểm từ phiếu + điểm Soán ngôi
+        total_display = round(base_total + (soan or 0.0), 2)
 
         row = [
             idx,
@@ -387,10 +415,13 @@ def _final_columns_and_rows(ct: CuocThi):
             _sv(getattr(ts, "vung", "")),
             _sv(getattr(ts, "nhom", "")),
             _sv(getattr(ts, "email", "")),
-            tong,
-            sao_fmt,
-            tim,
+            sao_fmt,        # Đối kháng
+            tim,            # Tim
+            soan_fmt,       # Soán ngôi
+            total_display,  # Tổng điểm = base_total + soán ngôi
         ]
+
+
         rows.append(row)
 
     return columns, rows
