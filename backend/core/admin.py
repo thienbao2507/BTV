@@ -212,6 +212,6 @@ class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
 
 @admin.register(BGDScore)
 class BGDScoreAdmin(admin.ModelAdmin):
-    list_display = ("bgd", "cuocThi", "thiSinh", "diem", "created_at", "updated_at")
+    list_display = ("bgd", "cuocThi", "vongThi", "thiSinh", "diem", "created_at", "updated_at")
     list_filter = ("cuocThi", "bgd")
     search_fields = ("bgd__maBGD", "cuocThi__ma", "thiSinh__maNV", "thiSinh__hoTen")

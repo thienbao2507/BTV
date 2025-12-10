@@ -2,7 +2,7 @@
 from __future__ import annotations
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Avg
+from django.db.models import Avg, Max
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side  # <- thêm Border, Side
 from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
 
@@ -420,16 +420,20 @@ def _final_columns_and_rows(ct: CuocThi):
     hearts_by_ma = {r["entry__thiSinh__maNV"]: int(r["hearts"] or 0) for r in heart_qs}
 
     # 4b) Soán ngôi: điểm trung bình BGDScore theo thí sinh cho cuộc thi này
-    bgd_qs = (
+    #     Mỗi BGD chỉ còn 1 dòng (điểm mới nhất) cho thí sinh trong bảng BGDScore
+    avg_qs = (
         BGDScore.objects
         .filter(cuocThi=ct)
         .values("thiSinh__maNV")
         .annotate(avg=Avg("diem"))
     )
+
     soan_by_ma = {
         r["thiSinh__maNV"]: (float(r["avg"]) if r["avg"] is not None else None)
-        for r in bgd_qs
+        for r in avg_qs
     }
+
+
 
     # 5) Duyệt thí sinh của CT & build rows
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
@@ -502,18 +506,20 @@ def _final_columns_and_rows(ct: CuocThi):
 def export_final_page(request):
     """
     Trang web Export Chung Kết (bảng Excel-like).
-    Cố định CT = 'Chung Kết' (không hiển thị dropdown chọn CT).
+    Yêu cầu truyền ct=<id> giống export thường để tránh nhầm cuộc thi.
     """
-    ct = _find_chung_ket()
-    if not ct:
+    ct_id = request.GET.get("ct")
+    if not ct_id:
         return render(request, "export/index.html", {
             "contest": None,
             "columns": [],
             "rows": [],
             "FROZEN_COUNT": 3,
-            "final_mode": True,   # flag cho UI nếu muốn
-            "error": "Chưa tạo cuộc thi 'Chung Kết'."
+            "final_mode": True,
+            "error": "Thiếu tham số ?ct=<id> cho Export Chung Kết.",
         })
+
+    ct = get_object_or_404(CuocThi, id=ct_id)
 
     columns, rows = _final_columns_and_rows(ct)
     return render(request, "export/index.html", {
@@ -521,8 +527,9 @@ def export_final_page(request):
         "columns": columns,
         "rows": rows,
         "FROZEN_COUNT": 3,
-        "final_mode": True
+        "final_mode": True,
     })
+
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
@@ -531,10 +538,13 @@ from io import BytesIO
 def export_final_xlsx(request):
     """
     Xuất XLSX cho Chung Kết (giống export-xlsx nhưng chỉ 2 cột điểm).
+    Bắt buộc truyền ?ct=<id> để chọn đúng cuộc thi.
     """
-    ct = _find_chung_ket()
-    if not ct:
-        return HttpResponse("Chưa có 'Chung Kết'", status=400)
+    ct_id = request.GET.get("ct")
+    if not ct_id:
+        return HttpResponse("Thiếu tham số ?ct=<id> cho Export Chung Kết.", status=400)
+
+    ct = get_object_or_404(CuocThi, id=ct_id)
 
     columns, rows = _final_columns_and_rows(ct)
 

@@ -9,7 +9,8 @@ from django.urls import reverse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Sum, Q, Avg, Count
+from django.db.models import Sum, Q, Avg, Count, Max
+
 
 from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem, BaiThi
 from .views_score import score_view  # tái dùng view chấm hiện có
@@ -406,10 +407,11 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         )
 
     # Lấy điểm BGD đã chấm (nếu có) và gán vào từng thí sinh
-    if ct and contestants:
+    if ct and vt_bgd and contestants:
         scores_qs = BGDScore.objects.filter(
             bgd=bgd,
             cuocThi=ct,
+            vongThi=vt_bgd,
             thiSinh__in=contestants,
         )
 
@@ -417,6 +419,7 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
 
         for ts in contestants:
             ts.current_bgd_score = scores_by_ts.get(ts.pk)
+
 
 
     context = {
@@ -508,17 +511,7 @@ def bgd_save_score(request):
             status=400,
         )
 
-    diem_int = int(round(score_val))
-
-    # 3) Lưu vào bảng BGDScore (mỗi BGD một dòng riêng)
-    bgd_score, created = BGDScore.objects.update_or_create(
-        bgd=bgd,
-        cuocThi=ct,
-        thiSinh=thi_sinh,
-        defaults={"diem": diem_int},
-    )
-
-    # 4) Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
+    # 3) Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
     #    fallback: vòng BGD mới nhất của cuộc thi này
     vt = None
     vt_id = request.session.get("bgd_vt_id")
@@ -536,11 +529,23 @@ def bgd_save_score(request):
         return JsonResponse(
             {
                 "ok": False,
-                "created": bool(created),
-                "message": "Đã lưu điểm BGD, nhưng không tìm thấy vòng thi BGD để gắn phiếu chấm.",
+                "created": False,
+                "message": "Không tìm thấy vòng thi BGD để gắn điểm.",
             },
             status=400,
         )
+
+    diem_int = int(round(score_val))
+
+    # 4) Lưu vào bảng BGDScore (mỗi BGD một dòng riêng theo VÒNG THI)
+    bgd_score, created = BGDScore.objects.update_or_create(
+        bgd=bgd,
+        cuocThi=ct,
+        vongThi=vt,
+        thiSinh=thi_sinh,
+        defaults={"diem": diem_int},
+    )
+
 
     # 5) Tạo / lấy bài thi dành riêng cho vòng BGD này
     bt_name = f"BGD - {vt.tenVongThi}"
@@ -553,13 +558,19 @@ def bgd_save_score(request):
         },
     )
 
-    # 6) Tính TRUNG BÌNH điểm tất cả BGD đã chấm cho thí sinh này trong cuộc thi này
-    agg = BGDScore.objects.filter(cuocThi=ct, thiSinh=thi_sinh).aggregate(
+    # 6) Tính TRUNG BÌNH điểm tất cả BGD đã chấm cho thí sinh này
+    #    trong VÒNG BGD hiện tại của cuộc thi này.
+    #    Mỗi BGD chỉ còn 1 dòng (điểm mới nhất) trong BGDScore
+    qs = BGDScore.objects.filter(cuocThi=ct, vongThi=vt, thiSinh=thi_sinh)
+
+    agg = qs.aggregate(
         avg=Avg("diem"),
-        cnt=Count("id"),
+        cnt=Count("bgd", distinct=True),
     )
     avg_score = int(round(agg.get("avg") or 0))
     bgd_count = int(agg.get("cnt") or 0)
+
+
 
     # 7) Chọn 1 giám khảo đại diện để đứng tên phiếu điểm tổng BGD
     #    Ưu tiên ADMIN, nếu không có thì dùng luôn judge đang login (nếu có).

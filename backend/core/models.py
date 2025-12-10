@@ -8,8 +8,11 @@ from django.utils import timezone
 from django.db.models import Max, SET_NULL
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Avg, Count
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 import secrets
 import string
+
 
 def _gen_token_20():
     # 20 ký tự [A-Za-z0-9] an toàn
@@ -577,13 +580,58 @@ class BattleVote(models.Model):
 class BGDScore(models.Model):
     bgd = models.ForeignKey(BanGiamDoc, on_delete=models.CASCADE, related_name="scores")
     cuocThi = models.ForeignKey(CuocThi, on_delete=models.CASCADE, related_name="bgd_scores")
+    vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE, related_name="bgd_scores", null=True, blank=True)
     thiSinh = models.ForeignKey(ThiSinh, on_delete=models.CASCADE, related_name="bgd_scores")
     diem = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("bgd", "cuocThi", "thiSinh")
+        unique_together = ("bgd", "cuocThi", "vongThi", "thiSinh")
 
     def __str__(self):
-        return f"{self.bgd.maBGD} - {self.cuocThi.ma} - {self.thiSinh.maNV}: {self.diem}"
+        vt = getattr(self.vongThi, "ma", None) or "N/A"
+        return f"{self.bgd.maBGD} - {self.cuocThi.ma} - {vt} - {self.thiSinh.maNV}: {self.diem}"
+    
+@receiver(post_save, sender=BGDScore)
+def sync_phieu_cham_from_bgdscore(sender, instance, **kwargs):
+    """
+    Khi một record BGDScore được lưu (kể cả sửa trong admin),
+    tự động tính lại điểm trung bình và cập nhật các Phiếu chấm BGD tương ứng.
+    """
+    ct = getattr(instance, "cuocThi", None)
+    vt = getattr(instance, "vongThi", None)
+    ts = getattr(instance, "thiSinh", None)
+
+    # Thiếu dữ liệu cơ bản thì bỏ qua
+    if not ct or not vt or not ts:
+        return
+
+    # Tính trung bình điểm các BGD cho thí sinh này trong đúng cuộc thi + vòng thi
+    qs = BGDScore.objects.filter(cuocThi=ct, vongThi=vt, thiSinh=ts)
+    agg = qs.aggregate(avg=Avg("diem"))
+    avg_val = agg.get("avg")
+
+    if avg_val is None:
+        return
+
+    avg_score = int(round(avg_val))
+
+    # Tìm các phiếu chấm BGD của thí sinh này trong vòng này
+    # (những phiếu có BaiThi tên bắt đầu bằng "BGD - ")
+    phieu_qs = PhieuChamDiem.objects.filter(
+        thiSinh=ts,
+        cuocThi=ct,
+        vongThi=vt,
+        baiThi__tenBaiThi__startswith="BGD - ",
+    )
+
+    # Nếu chưa từng tạo phiếu (do chưa chấm qua UI) thì thôi, không tự tạo mới ở đây
+    if not phieu_qs.exists():
+        return
+
+    now = timezone.now()
+    for phieu in phieu_qs:
+        phieu.diem = avg_score
+        phieu.updated_at = now
+        phieu.save(update_fields=["diem", "updated_at"])
