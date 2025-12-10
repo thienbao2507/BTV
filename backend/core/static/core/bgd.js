@@ -9,7 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         if (!slider) return;
 
-        // từ ô số -> slider
         input.addEventListener("input", function () {
             let val = parseFloat(input.value);
             if (isNaN(val)) val = 0;
@@ -19,11 +18,50 @@ document.addEventListener("DOMContentLoaded", function () {
             slider.value = val;
         });
 
-        // từ slider -> ô số
         slider.addEventListener("input", function () {
             input.value = slider.value;
         });
     });
+
+    // --- Chấm điểm bằng sao: 1–5 sao, mỗi sao = 20 điểm ---
+    const starGroups = document.querySelectorAll('[data-role="star-group"]');
+
+    starGroups.forEach(function (group) {
+        const idx = group.getAttribute("data-ts-index");
+        const stars = group.querySelectorAll('[data-role="star"]');
+        const input = document.querySelector(
+            'input[data-role="score-input"][data-ts-index="' + idx + '"]'
+        );
+        if (!input) return;
+
+        function syncStarsFromScore() {
+            let val = parseFloat(input.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 100) val = 100;
+            const starCount = Math.round(val / 20); // 0..5
+
+            stars.forEach(function (star, i) {
+                if (i < starCount) {
+                    star.classList.add("bgd-star-on");
+                } else {
+                    star.classList.remove("bgd-star-on");
+                }
+            });
+        }
+
+        stars.forEach(function (star, index) {
+            star.addEventListener("click", function () {
+                const starCount = index + 1;     // 1..5
+                const score = starCount * 20;    // 20,40,..100
+                input.value = String(score);
+                syncStarsFromScore();
+            });
+        });
+
+        // Khởi tạo trạng thái sao theo điểm hiện có (nếu có)
+        syncStarsFromScore();
+    });
+
 
     // --- Carousel: vuốt 1 lần qua 1 thí sinh + dots ---
     const track = document.querySelector('[data-role="carousel-track"]');

@@ -213,6 +213,86 @@ def bgd_list(request):
         })
     return render(request, "bgd/list.html", {"bgds": out})
 
+def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
+    bgd = BanGiamDoc.objects.filter(token=token).first()
+    if not bgd:
+        raise Http404("Token không hợp lệ")
+
+    judge = _auto_login_bgd_as_judge(request, bgd)
+
+    ct = CuocThi.objects.filter(id=ct_id).first()
+    if not ct:
+        raise Http404("Cuộc thi không tồn tại.")
+
+    vt_bgd = (
+        VongThi.objects
+        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
+        .first()
+    )
+    if not vt_bgd:
+        raise Http404("Vòng thi BGD không tồn tại hoặc không thuộc cuộc thi này.")
+
+    request.session["bgd_mode"] = "stars"
+    request.session["bgd_ct_id"] = ct.id
+    request.session["bgd_ct_name"] = ct.tenCuocThi
+    request.session["bgd_vt_id"] = vt_bgd.id
+    request.session["bgd_vt_name"] = vt_bgd.tenVongThi
+    request.session["bgd_token"] = token
+    request.session.modified = True
+
+    contestants = []
+
+    if ct and vt_bgd and vt_bgd.bgd_top_limit:
+        score_rows = (
+            PhieuChamDiem.objects
+            .filter(
+                cuocThi=ct,
+                vongThi__is_bgd_round=False,
+            )
+            .values("thiSinh")
+            .annotate(
+                total_diem=Sum("diem"),
+                total_time=Sum("thoiGian"),
+            )
+            .order_by("-total_diem", "total_time", "thiSinh")[:vt_bgd.bgd_top_limit]
+        )
+
+        ts_ids = [row["thiSinh"] for row in score_rows]
+        contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
+        order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
+        contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
+
+    if ct and not contestants:
+        contestants = (
+            ThiSinh.objects.filter(tham_gia__cuocThi=ct)
+            .annotate(
+                total_diem=Sum(
+                    "phieuchamdiem__diem",
+                    filter=Q(phieuchamdiem__cuocThi=ct),
+                )
+            )
+            .order_by("-total_diem", "maNV")
+            .distinct()[:5]
+        )
+
+    if ct and vt_bgd and contestants:
+        scores_qs = BGDScore.objects.filter(
+            bgd=bgd,
+            cuocThi=ct,
+            vongThi=vt_bgd,
+            thiSinh__in=contestants,
+        )
+        scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
+        for ts in contestants:
+            ts.current_bgd_score = scores_by_ts.get(ts.pk)
+
+    context = {
+        "bgd": bgd,
+        "judge": judge,
+        "ct": ct,
+        "contestants": contestants,
+    }
+    return render(request, "bgd/go_stars.html", context)
 
 def bgd_qr_index(request, token=None):
     items = list(
