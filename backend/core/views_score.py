@@ -20,10 +20,11 @@ from .models import (
     BanGiamDoc,
     SpecialRoundPairMember,
     SpecialRoundScoreLog,
+    compute_special_round_pair_result
 )
 
 import json
-import unicodedata     # 👈 thêm dòng này
+import unicodedata
 
 BGD_SESSION_KEYS = ("bgd_mode", "bgd_ct_id", "bgd_ct_name", "bgd_token")
 
@@ -987,111 +988,20 @@ def score_template_api(request, btid: int):
         "message": f"Đã lưu {total} điểm cho {bt.ma} (TEMPLATE).",
     })
     
-# def _apply_special_round_bonus_if_ready(bt, thi_sinh, judge, raw_total, raw_time):
-    """
-    Nếu bài thi thuộc vòng đặc biệt:
-    - Tìm cặp SpecialRoundPairMember của thí sinh trong vòng đó
-    - Kiểm tra người còn lại trong cặp đã có phiếu chấm TEMPLATE cùng bài thi, cùng giám khảo chưa
-    - Nếu cả 2 đã chấm:
-        • So sánh raw_total
-        • Nếu bằng nhau, so sánh raw_time (ít thời gian hơn thắng)
-        • Người thắng: nhận vt.special_bonus_score
-        • Người thua: nhận 0
-    Lưu trực tiếp vào PhieuChamDiem (field diem).
-    """
-    vt = getattr(bt, "vongThi", None)
-    if not vt or not getattr(vt, "is_special_bonus_round", False):
-        return  # không phải vòng đặc biệt → bỏ qua
-
-    bonus = getattr(vt, "special_bonus_score", 100) or 100
-
-    # Xác định entry cặp của thí sinh trong vòng này
-    try:
-        member = SpecialRoundPairMember.objects.select_related("pair", "thiSinh").get(
-            pair__vongThi=vt,
-            thiSinh=thi_sinh,
-        )
-    except SpecialRoundPairMember.DoesNotExist:
-        return  # thí sinh này không nằm trong top 20/cặp đặc biệt → bỏ qua
-
-    # Lấy đối thủ trong cùng cặp
-    opponent_member = (
-        SpecialRoundPairMember.objects.select_related("thiSinh")
-        .filter(pair=member.pair)
-        .exclude(thiSinh=thi_sinh)
-        .first()
-    )
-    if not opponent_member:
-        return  # cặp không đủ 2 người → không so sánh được
-
-    opponent = opponent_member.thiSinh
-
-    # Lấy phiếu chấm của cả 2 cho bài thi này, cùng giám khảo
-    from .models import PhieuChamDiem  # đảm bảo import an toàn nếu file thay đổi
-
-    try:
-        phieu_self = PhieuChamDiem.objects.get(
-            thiSinh=thi_sinh,
-            giamKhao=judge,
-            baiThi=bt,
-        )
-    except PhieuChamDiem.DoesNotExist:
-        return
-
-    phieu_opp = PhieuChamDiem.objects.filter(
-        thiSinh=opponent,
-        giamKhao=judge,
-        baiThi=bt,
-    ).first()
-
-    # Nếu đối thủ chưa được chấm → chưa đủ 2 điểm để so sánh
-    if not phieu_opp:
-        return
-
-    # Điểm & thời gian raw dùng để so sánh
-    score_self = float(raw_total)
-    time_self = int(raw_time or 0)
-
-    score_opp = float(phieu_opp.diem or 0)
-    time_opp = int(phieu_opp.thoiGian or 0)
-
-    # Xác định người thắng
-    winner = None
-    loser = None
-
-    if score_self > score_opp:
-        winner, loser = phieu_self, phieu_opp
-    elif score_self < score_opp:
-        winner, loser = phieu_opp, phieu_self
-    else:
-        # Điểm bằng nhau → so sánh thời gian
-        if time_self < time_opp:
-            winner, loser = phieu_self, phieu_opp
-        elif time_self > time_opp:
-            winner, loser = phieu_opp, phieu_self
-        else:
-            # Hoà tuyệt đối → tạm thời cho cả 2 = 0 (tuỳ bạn muốn xử lý sao thêm)
-            PhieuChamDiem.objects.filter(pk=phieu_self.pk).update(diem=0)
-            PhieuChamDiem.objects.filter(pk=phieu_opp.pk).update(diem=0)
-            return
-
-    # Áp dụng điểm thưởng: thắng = bonus, thua = 0
-    if winner and loser:
-        PhieuChamDiem.objects.filter(pk=winner.pk).update(diem=bonus)
-        PhieuChamDiem.objects.filter(pk=loser.pk).update(diem=0)
-        
-        
 def _apply_special_round_bonus_if_ready(bt, thi_sinh, judge, raw_total, raw_time):
     """
-    Logic vòng đặc biệt:
+    Logic vòng đặc biệt (phiên bản mới – không phụ thuộc cùng giám khảo):
+
     - Chỉ chạy nếu vongThi.is_special_bonus_round == True
     - Tìm cặp SpecialRoundPairMember của thí sinh trong vòng đó
-    - Khi cả 2 người trong cặp đã có Phiếu chấm (cùng bài, cùng GK):
-        + Ghi log điểm raw của cả 2 vào SpecialRoundScoreLog
-        + So sánh raw_score (nếu bằng thì so raw_time, ít hơn thắng)
-        + Cập nhật PhieuChamDiem:
-              người thắng  = bonus (special_bonus_score)
-              người thua   = 0
+    - Ghi log điểm raw vào SpecialRoundScoreLog (1 thí sinh, 1 bài, 1 GK)
+    - Gom toàn bộ log của CẶP đó (mọi giám khảo) bằng compute_special_round_pair_result:
+        + avg(raw_score) + tie-break theo thời gian (raw_time)
+        + trả về dict {thiSinh_id: 100 hoặc 0}
+    - Áp dụng:
+        + winner  -> special_bonus_score (mặc định 100)
+        + loser   -> 0
+      cho TẤT CẢ Phiếu chấm (PhieuChamDiem) của 2 thí sinh trong cặp ở bài đó.
     """
 
     vt = getattr(bt, "vongThi", None)
@@ -1099,98 +1009,67 @@ def _apply_special_round_bonus_if_ready(bt, thi_sinh, judge, raw_total, raw_time
         return  # không phải vòng đặc biệt
 
     ct = getattr(vt, "cuocThi", None)
-    if not ct or not judge or not thi_sinh:
+    if not ct or not thi_sinh:
         return
 
+    # Điểm thưởng cho người thắng (mặc định 100)
     bonus = int(getattr(vt, "special_bonus_score", 100) or 100)
 
-    # 1. Lấy member của thí sinh trong cặp
+    # 1. Lấy member của thí sinh trong cặp đặc biệt
     try:
         member = SpecialRoundPairMember.objects.select_related("pair", "thiSinh").get(
+            pair__cuocThi=ct,
             pair__vongThi=vt,
             thiSinh=thi_sinh,
         )
     except SpecialRoundPairMember.DoesNotExist:
-        return  # không nằm trong cặp đặc biệt
-
-    pair = member.pair
-
-    # 2. Tìm đối thủ trong cùng cặp
-    opponent_member = (
-        SpecialRoundPairMember.objects
-        .select_related("thiSinh")
-        .filter(pair=pair)
-        .exclude(pk=member.pk)
-        .first()
-    )
-    if not opponent_member:
+        # Thí sinh này không nằm trong cặp đặc biệt (top 20) → bỏ qua
         return
 
-    opponent = opponent_member.thiSinh
+    special_pair = member.pair
 
-    # 3. Lấy 2 phiếu chấm (cùng bài, cùng vòng, cùng GK)
-    sheets = list(
-        PhieuChamDiem.objects.filter(
-            cuocThi=ct,
-            vongThi=vt,
-            baiThi=bt,
-            giamKhao=judge,
-            thiSinh__in=[thi_sinh, opponent],
-        )
-    )
-    if len(sheets) < 2:
-        # mới chấm xong 1 người → chưa so sánh
-        return
-
-    sheet_self = next((s for s in sheets if s.thiSinh_id == thi_sinh.pk), None)
-    sheet_opp  = next((s for s in sheets if s.thiSinh_id == opponent.pk), None)
-
-    if not sheet_self or not sheet_opp:
-        return
-
-    # 4. Ghi log raw cho cả 2
-    SpecialRoundScoreLog.objects.create(
+    # 2. Ghi / cập nhật log điểm raw cho thí sinh này & giám khảo này
+    #    (1 dòng / thí sinh / giám khảo / bài thi trong vòng đặc biệt)
+    SpecialRoundScoreLog.objects.update_or_create(
         cuocThi=ct,
         vongThi=vt,
         baiThi=bt,
         pair_member=member,
         giamKhao=judge,
-        raw_score=int(sheet_self.diem or 0),
-        raw_time=int(getattr(sheet_self, "thoiGian", 0) or 0),
+        defaults={
+            "raw_score": float(raw_total or 0),
+            "raw_time": int(raw_time or 0),
+        },
     )
-    SpecialRoundScoreLog.objects.create(
+
+    # 3. Tính kết quả cho cả CẶP, BỎ QUA giám khảo
+    result_map = compute_special_round_pair_result(
         cuocThi=ct,
         vongThi=vt,
         baiThi=bt,
-        pair_member=opponent_member,
-        giamKhao=judge,
-        raw_score=int(sheet_opp.diem or 0),
-        raw_time=int(getattr(sheet_opp, "thoiGian", 0) or 0),
+        special_pair=special_pair,
     )
 
-    # 5. So sánh để tìm winner / loser (dùng raw điểm + thời gian)
-    score_self = int(sheet_self.diem or 0)
-    score_opp  = int(sheet_opp.diem or 0)
-    time_self  = int(getattr(sheet_self, "thoiGian", 0) or 0)
-    time_opp   = int(getattr(sheet_opp, "thoiGian", 0) or 0)
+    # Nếu chưa đủ 2 bên có log -> chưa xử lý
+    if not result_map:
+        return
 
-    if score_self > score_opp:
-        winner_sheet, loser_sheet = sheet_self, sheet_opp
-    elif score_opp > score_self:
-        winner_sheet, loser_sheet = sheet_opp, sheet_self
-    else:
-        # điểm bằng nhau → so thời gian, ít hơn thắng
-        if time_self < time_opp:
-            winner_sheet, loser_sheet = sheet_self, sheet_opp
-        elif time_opp < time_self:
-            winner_sheet, loser_sheet = sheet_opp, sheet_self
+    # 4. Áp dụng kết quả 100/0 (hoặc special_bonus_score/0) vào PhieuChamDiem
+    #    cho tất cả phiếu của 2 thí sinh trong bài này
+    for ts_id, val in result_map.items():
+        if ts_id is None:
+            continue
+
+        # compute_special_round_pair_result trả 0 hoặc 100.
+        # Nếu bạn đổi special_bonus_score != 100 thì map lại ở đây:
+        if val == 100:
+            final_score = bonus
         else:
-            # điểm & thời gian đều bằng nhau → hòa, cả 2 = 0
-            PhieuChamDiem.objects.filter(
-                pk__in=[sheet_self.pk, sheet_opp.pk]
-            ).update(diem=0)
-            return
+            final_score = 0
 
-    # 6. Ghi điểm final 100 / 0 vào Phiếu chấm
-    PhieuChamDiem.objects.filter(pk=winner_sheet.pk).update(diem=bonus)
-    PhieuChamDiem.objects.filter(pk=loser_sheet.pk).update(diem=0)
+        PhieuChamDiem.objects.filter(
+            cuocThi=ct,
+            vongThi=vt,
+            baiThi=bt,
+            thiSinh_id=ts_id,
+        ).update(diem=final_score)

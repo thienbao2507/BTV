@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.db.models import Max, SET_NULL
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Min
 import secrets
 import string
 
@@ -400,7 +400,77 @@ class SpecialRoundScoreLog(models.Model):
         pair_id = getattr(self.pair_member.pair, "id", None)
         return f"{ts} – {self.raw_score}đ (cặp {pair_id})"
 
+def compute_special_round_pair_result(cuocThi, vongThi, baiThi, special_pair):
+    """
+    Tính kết quả 100/0 cho 1 cặp vòng đặc biệt, BỎ QUA giamKhao.
+    - Gom tất cả SpecialRoundScoreLog của pair đó (mọi giám khảo).
+    - Mỗi thí sinh: tính avg(raw_score), min(raw_time).
+    - So sánh 2 bên → winner = 100, loser = 0.
+    Trả về dict: {thiSinh_id: 100 hoặc 0}
+    """
+    from .models import SpecialRoundScoreLog, SpecialRoundPairMember  # tránh import vòng
 
+    # 1) Lấy tất cả log thuộc đúng cuộc thi / vòng / bài / cặp
+    logs = (
+        SpecialRoundScoreLog.objects
+        .filter(
+            cuocThi=cuocThi,
+            vongThi=vongThi,
+            baiThi=baiThi,
+            pair_member__pair=special_pair,
+        )
+    )
+
+    # Nếu chưa đủ hai thí sinh có log thì chưa làm gì
+    agg = (
+        logs.values("pair_member_id")
+        .annotate(
+            avg_score=Avg("raw_score"),
+            best_time=Min("raw_time"),
+        )
+    )
+
+    data = list(agg)
+    if len(data) < 2:
+        # Mới có 1 bên được chấm → chưa kết luận
+        return {}
+
+    # Giả sử 1vs1: lấy 2 entry đầu
+    m1, m2 = data[0], data[1]
+
+    # Map pair_member_id -> thiSinh_id (để trả kết quả)
+    member_qs = SpecialRoundPairMember.objects.filter(id__in=[m1["pair_member_id"], m2["pair_member_id"]])
+    member_map = {m.id: m.thiSinh_id for m in member_qs}
+
+    # Helper lấy số liệu
+    def key(m):
+        score = m["avg_score"] or 0.0
+        time_ = m["best_time"]
+        # Nếu không có thời gian → coi như rất lớn (bất lợi trong tie-break)
+        if time_ is None:
+            time_ = 10**9
+        return score, -time_  # score ↑, time ↓ (dùng -time để sort desc theo score, asc theo time)
+
+    s1, s2 = key(m1), key(m2)
+
+    # Mặc định 0 điểm
+    result = {
+        member_map.get(m1["pair_member_id"]): 0,
+        member_map.get(m2["pair_member_id"]): 0,
+    }
+
+    # So sánh:
+    if s1 > s2:
+        # m1 thắng
+        result[member_map[m1["pair_member_id"]]] = 100
+    elif s2 > s1:
+        # m2 thắng
+        result[member_map[m2["pair_member_id"]]] = 100
+    else:
+        # Hoà tuyệt đối: cả hai 0 (hoặc tuỳ bạn muốn chia 50/50 thì chỉnh ở đây)
+        pass
+
+    return result
 
 class CapThiDau(models.Model):
     """
