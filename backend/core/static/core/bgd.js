@@ -1,5 +1,7 @@
+// static/core/bgd.js
 document.addEventListener("DOMContentLoaded", function () {
-    // Đồng bộ ô số <-> slider, thang 0–100
+    console.log("[BGD] bgd.js loaded");
+    // ================== ĐỒNG BỘ Ô SỐ <-> SLIDER (giữ nguyên cho trang go cũ) ==================
     const numberInputs = document.querySelectorAll('input[data-role="score-input"]');
 
     numberInputs.forEach(function (input) {
@@ -24,63 +26,111 @@ document.addEventListener("DOMContentLoaded", function () {
             input.value = slider.value;
         });
     });
+    
 
-    // --- Carousel: vuốt 1 lần qua 1 thí sinh + dots ---
+    // ================== CHẤM SAO (1–5★) ==================
+    const STAR_MIN = 1;
+    const STAR_MAX = 5;
+
+    function setStarsForIndex(index, stars) {
+        console.log("[BGD] setStarsForIndex", { index, stars });
+        // Cập nhật màu / trạng thái cho toàn bộ nút sao của thí sinh ts-index = index
+        const buttons = document.querySelectorAll(
+            'button[data-role="star-btn"][data-ts-index="' + index + '"]'
+        );
+
+        const hiddenInput = document.querySelector(
+            'input[data-role="star-value"][data-ts-index="' + index + '"]'
+        );
+
+        if (hiddenInput) {
+            hiddenInput.value = stars;
+            console.log("[BGD]  hiddenInput value set =", hiddenInput.value);
+        }
+
+        // Nếu bạn đang dùng icon ảnh + class .active như battle/index.html
+        buttons.forEach(function (btn) {
+            const btnStar = parseInt(btn.getAttribute("data-star")) || 0;
+            if (btnStar <= stars && stars > 0) {
+                btn.classList.add("active");
+            } else {
+                btn.classList.remove("active");
+            }
+        });
+    }
+
+    const starButtons = document.querySelectorAll('button[data-role="star-btn"]');
+    starButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const index = btn.getAttribute("data-ts-index");
+            const starVal = parseInt(btn.getAttribute("data-star")) || 0;
+
+            const hiddenInput = document.querySelector(
+                'input[data-role="star-value"][data-ts-index="' + index + '"]'
+            );
+            const current = hiddenInput ? parseInt(hiddenInput.value) || 0 : 0;
+
+            // Bấm lại đúng ngôi sao đang chọn -> về 0 sao (bỏ chấm)
+            let newStars = starVal;
+            if (current === starVal) {
+                newStars = 0;
+            }
+
+            console.log("[BGD] click star", {
+                index,
+                starVal,
+                current,
+                newStars,
+            });
+
+            if (newStars < 0) newStars = 0;
+            if (newStars > STAR_MAX) newStars = STAR_MAX;
+
+            setStarsForIndex(index, newStars);
+        });
+    });
+
+    // ================== CAROUSEL ==================
     const track = document.querySelector('[data-role="carousel-track"]');
     const slides = track ? Array.from(track.querySelectorAll('[data-slide-index]')) : [];
     const dots = Array.from(document.querySelectorAll('[data-role="carousel-dot"]'));
 
     if (track && slides.length > 0) {
         let current = 0;
-        let ignoreSwipe = false;
+        let startX = null;
 
         function updateCarousel() {
-
-            const offset = -current * 100;
-            track.style.transform = "translateX(" + offset + "%)";
-
+            const pct = -current * 100;
+            track.style.transform = "translateX(" + pct + "%)";
             dots.forEach(function (dot, idx) {
                 if (idx === current) {
-                    dot.classList.add("bg-white");
+                    dot.classList.add("bg-slate-100");
                     dot.classList.remove("bg-slate-500/40");
                 } else {
-                    dot.classList.remove("bg-white");
+                    dot.classList.remove("bg-slate-100");
                     dot.classList.add("bg-slate-500/40");
                 }
-
             });
         }
 
-        // Vuốt 1 lần -> move +/-1
-        let startX = null;
-
-        function onTouchStart(e) {
-            if (!e.touches || e.touches.length === 0) return;
-
-            const target = e.target;
-            if (target.closest('input[data-role="score-slider"], input[data-role="score-input"]')) {
-                // Vuốt bắt đầu trên thanh điểm hoặc ô điểm -> không dùng cho carousel
-                ignoreSwipe = true;
-                startX = null;
-                return;
-            }
-
-            ignoreSwipe = false;
-            startX = e.touches[0].clientX;
+        function onTouchStart(ev) {
+            const touch = ev.touches && ev.touches[0]
+                ? ev.touches[0]
+                : ev.changedTouches
+                ? ev.changedTouches[0]
+                : null;
+            if (!touch) return;
+            startX = touch.clientX;
         }
 
-
-        function onTouchEnd(e) {
-            if (ignoreSwipe) {
-                // Vuốt xuất phát từ slider / ô điểm -> không đổi thí sinh
-                ignoreSwipe = false;
+        function onTouchEnd(ev) {
+            if (startX == null) return;
+            const touch = ev.changedTouches && ev.changedTouches[0] ? ev.changedTouches[0] : null;
+            if (!touch) {
                 startX = null;
                 return;
             }
-
-            if (startX === null) return;
-            const touch = e.changedTouches && e.changedTouches[0];
-            const endX = touch ? touch.clientX : startX;
+            const endX = touch.clientX;
             const dx = endX - startX;
             const threshold = 40; // px
 
@@ -95,12 +145,11 @@ document.addEventListener("DOMContentLoaded", function () {
             startX = null;
         }
 
-
         const viewport = document.querySelector(".bgd-carousel") || track;
         viewport.addEventListener("touchstart", onTouchStart, { passive: true });
         viewport.addEventListener("touchend", onTouchEnd);
 
-        // Click vào dot để nhảy trực tiếp
+        // Click vào dot
         dots.forEach(function (dot, idx) {
             dot.addEventListener("click", function () {
                 current = idx;
@@ -108,11 +157,10 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
 
-        // Khởi tạo vị trí ban đầu
-        // Khởi tạo vị trí ban đầu
         updateCarousel();
     }
 
+    // ================== TOAST LƯU ĐIỂM ==================
     function showScoreToast() {
         const toastInner = document.querySelector("#bgd-score-toast > div");
         if (!toastInner) {
@@ -127,9 +175,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 3000);
     }
 
-    // --- Lưu điểm cho từng thí sinh ---
+    // ================== LƯU ĐIỂM ==================
     const saveButtons = document.querySelectorAll('button[data-role="save-score"]');
-
 
     saveButtons.forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -137,29 +184,56 @@ document.addEventListener("DOMContentLoaded", function () {
             const index = btn.getAttribute("data-ts-index");
             if (!tsId) return;
 
-            const input = document.querySelector(
-                'input[data-role="score-input"][data-ts-index="' + index + '"]'
-            );
-            if (!input) return;
+            let finalScore = null;
 
-            let val = parseFloat(input.value);
-            if (isNaN(val)) val = 0;
-            if (val < 0) val = 0;
-            if (val > 100) val = 100;
-            input.value = val;
+            // ---- MODE CHẤM SAO (Top 10 – go_stars) ----
+            const starInput = document.querySelector(
+                'input[data-role="star-value"][data-ts-index="' + index + '"]'
+            );
+            if (starInput) {
+                let stars = parseInt(starInput.value);
+                if (isNaN(stars)) stars = 0;
+
+                if (stars === 0) {
+                    if (!confirm("Bạn chưa chọn sao nào. Bạn có chắc muốn lưu 0 điểm cho thí sinh này?")) {
+                        return;
+                    }
+                }
+
+                if (stars < 0) stars = 0;
+                if (stars > STAR_MAX) stars = STAR_MAX;
+
+                // 1★ = 20 điểm
+                finalScore = stars * 20;
+            } else {
+                // ---- MODE ĐIỂM SỐ (go cũ) ----
+                const input = document.querySelector(
+                    'input[data-role="score-input"][data-ts-index="' + index + '"]'
+                );
+                if (!input) return;
+
+                let val = parseFloat(input.value);
+                if (isNaN(val)) val = 0;
+                if (val < 0) val = 0;
+                if (val > 100) val = 100;
+                input.value = val;
+
+                finalScore = val;
+            }
 
             btn.disabled = true;
             const oldText = btn.textContent;
-            btn.textContent = "Đang lưu...";
+            btn.textContent = "Đang lưu.";
 
             fetch("/bgd/api/save-score/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                credentials: "include",  // để giữ session -> lấy được bgd_token
                 body: JSON.stringify({
                     thiSinh_id: tsId,
-                    score: val,
+                    score: finalScore,
                 }),
             })
                 .then(function (res) {
@@ -178,7 +252,6 @@ document.addEventListener("DOMContentLoaded", function () {
                         btn.textContent = oldText;
                     }, 1500);
                 })
-
                 .catch(function (err) {
                     alert("Không lưu được điểm: " + err.message);
                     btn.textContent = oldText;
@@ -189,4 +262,3 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
-

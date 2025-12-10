@@ -453,8 +453,6 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
         contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
 
-
-
     # Nếu chưa cấu hình vòng BGD hoặc chưa có dữ liệu -> fallback Top 5 toàn cuộc thi
     if ct and not contestants:
         contestants = (
@@ -481,17 +479,38 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
 
         for ts in contestants:
-            ts.current_bgd_score = scores_by_ts.get(ts.pk)
+            score = scores_by_ts.get(ts.pk)
+            ts.current_bgd_score = score
 
+            # Quy đổi điểm (0–100) → số sao (0–5) để hiển thị cho trang go_stars
+            stars = 0
+            if isinstance(score, (int, float)) and score > 0:
+                stars = int(score // 20)
+                if stars < 0:
+                    stars = 0
+                if stars > 5:
+                    stars = 5
+            ts.current_bgd_stars = stars
 
+    # Chọn template:
+    #  - Nếu vòng này là vòng BGD Top 10 (bgd_top_limit = 10) -> dùng giao diện chấm sao.
+    #  - Các trường hợp khác (Top 5, v.v.) -> giữ nguyên trang go cũ.
+    if vt_bgd and vt_bgd.is_bgd_round and vt_bgd.bgd_top_limit == 10:
+        template_name = "bgd/go_stars.html"
+    else:
+        template_name = "bgd/go.html"
 
     context = {
         "bgd": bgd,
         "judge": judge,
         "ct": ct,
+        "vt": vt_bgd,
         "contestants": contestants,
+        # Dùng cho vòng chấm sao (go_stars)
+        "star_range": range(1, 6),
     }
-    return render(request, "bgd/go.html", context)
+    return render(request, template_name, context)
+
 
 
 
