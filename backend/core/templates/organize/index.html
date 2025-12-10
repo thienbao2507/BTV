@@ -733,16 +733,17 @@
         gap: 6px;
         margin-left: auto;
     }
+
     .bonus-input {
-    margin-left: 8px;
-    padding: 4px 8px;
-    border-radius: 8px;
-    border: 1px solid #334155;
-    background: #020617;
-    color: #e5e7eb;
-    width: 80px;
-    font-size: 12px;
-}
+        margin-left: 8px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #020617;
+        color: #e5e7eb;
+        width: 80px;
+        font-size: 12px;
+    }
 </style>
 {% endblock %}
 
@@ -816,7 +817,7 @@
                                 data-init="{{ vt.tenVongThi|escapejs }}">
                         </form>
 
-                                                <!-- Vòng đặc biệt -->
+                        <!-- Vòng đặc biệt -->
                         <form method="post" class="vt-special">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_vt_special">
@@ -824,6 +825,7 @@
 
                             <label class="switch" title="Bật/tắt vòng đặc biệt">
                                 <input type="checkbox" name="is_special_bonus_round" {% if vt.is_special_bonus_round%}checked{% endif %} onchange="this.form.submit()">
+
                                 <span class="slider"></span>
                             </label>
 
@@ -844,6 +846,25 @@
                         </form>
                         {% endif %}
 
+                        <!-- Chế độ BGD -->
+                        <form method="post" class="row" style="margin-left:8px; gap:10px; align-items:center">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="config_vt_bgd">
+                            <input type="hidden" name="vongThi_id" value="{{ vt.id }}">
+
+                            <label class="switch" title="Bật/tắt chế độ BGD">
+                                <input type="checkbox" name="is_bgd_round" {% if vt.is_bgd_round %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                            <span>Chế độ BGD</span>
+
+                            <input type="number" name="bgd_top_limit" class="bgd-top-input" placeholder="Top..." min="1"
+                                value="{{ vt.bgd_top_limit|default_if_none:'' }}" style="width:80px; display:none;">
+
+                            <button type="submit" class="btn btn-sm bgd-submit-btn" style="display:none;">
+                                Bắt đầu lấy Top
+                            </button>
+                        </form>
 
                         <!-- Nút xóa & collapse -->
                         <div class="vt-controls">

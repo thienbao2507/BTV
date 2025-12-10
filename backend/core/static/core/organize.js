@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (maxLabel) maxLabel.style.display = 'none';
         if (maxInput) { maxInput.style.display = 'none'; maxInput.required = false; maxInput.value = ''; }
       }
-if (fileTemplate) {
-  fileTemplate.style.display = (sel.value === 'TEMPLATE') ? '' : 'none';
-}
+      if (fileTemplate) {
+        fileTemplate.style.display = (sel.value === 'TEMPLATE') ? '' : 'none';
+      }
 
     }
     sel.addEventListener('change', sync);
@@ -38,7 +38,7 @@ if (fileTemplate) {
   });
 
   // === Kebab (3 chấm) dropdown ===
-  (function initKebab(){
+  (function initKebab() {
     document.body.addEventListener('click', (e) => {
       // đóng tất cả trước
       document.querySelectorAll('.kebab-menu').forEach(m => m.style.display = 'none');
@@ -68,7 +68,7 @@ if (fileTemplate) {
   // === Import Excel cho popup THỜI GIAN ===
   const tmImportForm = document.getElementById('tm-import-form');
   const tmImportBtid = document.getElementById('tm-import-btid');
-  const tmFile       = document.getElementById('tm-file');
+  const tmFile = document.getElementById('tm-file');
 
   // đồng bộ id bài thi cho form import khi mở modal
   function syncTimeImportBtid() {
@@ -165,8 +165,8 @@ if (fileTemplate) {
     `;
     row.querySelector('.tm-start-min').value = sMin;
     row.querySelector('.tm-start-sec').value = sSec;
-    row.querySelector('.tm-end-min').value   = eMin;
-    row.querySelector('.tm-end-sec').value   = eSec;
+    row.querySelector('.tm-end-min').value = eMin;
+    row.querySelector('.tm-end-sec').value = eSec;
     row.querySelector('.tm-del').addEventListener('click', () => row.remove());
     rowsBox.appendChild(row);
   }
@@ -220,7 +220,7 @@ if (fileTemplate) {
 
       // 4️⃣ Tính ra giây để so sánh
       const startSec = partsToSec(sm, ss);
-      const endSec   = partsToSec(em, es);
+      const endSec = partsToSec(em, es);
 
       // 5️⃣ Kiểm tra thời gian kết thúc nhỏ hơn bắt đầu
       if (!hasError && endSec <= startSec) {
@@ -298,8 +298,8 @@ if (fileTemplate) {
 
   // ===== Gợi ý + Tìm kiếm (autocomplete giống index) =====
   const searchBox = document.getElementById('search-ct');
-  const suggList  = document.getElementById('ct-suggest');   // dropdown
-  const table     = document.querySelector('table');
+  const suggList = document.getElementById('ct-suggest');   // dropdown
+  const table = document.querySelector('table');
 
   // Chuẩn hoá bỏ dấu
   const vnNorm = s => (s || '')
@@ -358,8 +358,8 @@ if (fileTemplate) {
       suggList.innerHTML = matches.map((m, i) => {
         const statusEl = m.tr.querySelector('[data-status]');
         const status = statusEl ? (statusEl.dataset.status || '') :
-                      (m.tr.textContent.includes('Đang bật') ? 'Bật' :
-                      m.tr.textContent.includes('Đang tắt') ? 'Tắt' : '');
+          (m.tr.textContent.includes('Đang bật') ? 'Bật' :
+            m.tr.textContent.includes('Đang tắt') ? 'Tắt' : '');
         return `
           <div class="sugg-item" data-idx="${i}">
             <span class="sugg-badge"></span>
@@ -405,12 +405,12 @@ if (fileTemplate) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         activeIdx = (activeIdx + 1) % itemEls.length;
-        itemEls.forEach((el,i)=>el.classList.toggle('is-active', i===activeIdx));
+        itemEls.forEach((el, i) => el.classList.toggle('is-active', i === activeIdx));
         itemEls[activeIdx].scrollIntoView({ block: 'nearest' });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         activeIdx = (activeIdx - 1 + itemEls.length) % itemEls.length;
-        itemEls.forEach((el,i)=>el.classList.toggle('is-active', i===activeIdx));
+        itemEls.forEach((el, i) => el.classList.toggle('is-active', i === activeIdx));
         itemEls[activeIdx].scrollIntoView({ block: 'nearest' });
       } else if (e.key === 'Enter') {
         e.preventDefault();
@@ -426,9 +426,9 @@ if (fileTemplate) {
       if (suggList && !suggList.contains(e.target) && e.target !== searchBox) closeList();
     });
   }
-  const viewModal   = document.getElementById('tpl-view-modal');
+  const viewModal = document.getElementById('tpl-view-modal');
   const viewContent = document.getElementById('tplv-content');
-  const viewClose   = document.getElementById('tplv-close');
+  const viewClose = document.getElementById('tplv-close');
 
   if (viewModal && viewContent) {
     document.body.addEventListener('click', function (e) {
@@ -441,119 +441,119 @@ if (fileTemplate) {
 
       // copy HTML vào modal
       viewContent.innerHTML = src.innerHTML;
-  // ===== Làm sạch nội dung bảng trong popup =====
-  const rows = viewContent.querySelectorAll('tbody tr');
+      // ===== Làm sạch nội dung bảng trong popup =====
+      const rows = viewContent.querySelectorAll('tbody tr');
 
 
 
-  function stripCodes(txt) {
-    // Bỏ tiền tố "BT123 - ", "VT02 - " ở bất kỳ vị trí nào
-    txt = txt.replace(/\b(?:BT|VT)\d+\s*-\s*/gi, '');
-    // Bỏ số trong ngoặc vuông: [1], [ 2 ], [10]
-    txt = txt.replace(/\[\s*\d+\s*\]\s*/g, '');
-    // Gộp dấu cách/thanh nối thừa
-    txt = txt.replace(/\s*[-–—]\s*/g, ' - ');
-    txt = txt.replace(/\s{2,}/g, ' ').trim();
-    // Bỏ " - " ở đầu/cuối nếu lỡ dư
-    txt = txt.replace(/^-\s+/, '').replace(/\s+-$/, '').trim();
-    return txt;
-  }
-
-  rows.forEach(tr => {
-    const tdSection = tr.cells?.[0];
-    const tdItem    = tr.cells?.[1];
-
-    if (!tdSection || !tdItem) return;
-
-    // Làm sạch chung
-    let s = stripCodes(tdSection.textContent || '');
-    let i = stripCodes(tdItem.textContent || '');
-
-    // Bỏ phần lặp "Mục lớn" trong "Mục nhỏ" nhưng KHÔNG để trống "Mục nhỏ"
-    const sLower = s.toLowerCase();
-    let iLower = i.toLowerCase();
-
-    if (sLower) {
-      // Các phân cách thường gặp sau phần lặp
-      const seps = [' - ', ' — ', ': ', ' – ', ' —', '-', ':'];
-      let trimmed = false;
-
-      for (const sep of seps) {
-        const prefix = sLower + sep.toLowerCase();
-        if (iLower.startsWith(prefix)) {
-          const rest = i.slice(prefix.length).trim();
-          if (rest) {            // chỉ cắt khi có phần dư
-            i = rest;
-            iLower = i.toLowerCase();
-            trimmed = true;
-          }
-          break;                  // gặp 1 sep là dừng
-        }
+      function stripCodes(txt) {
+        // Bỏ tiền tố "BT123 - ", "VT02 - " ở bất kỳ vị trí nào
+        txt = txt.replace(/\b(?:BT|VT)\d+\s*-\s*/gi, '');
+        // Bỏ số trong ngoặc vuông: [1], [ 2 ], [10]
+        txt = txt.replace(/\[\s*\d+\s*\]\s*/g, '');
+        // Gộp dấu cách/thanh nối thừa
+        txt = txt.replace(/\s*[-–—]\s*/g, ' - ');
+        txt = txt.replace(/\s{2,}/g, ' ').trim();
+        // Bỏ " - " ở đầu/cuối nếu lỡ dư
+        txt = txt.replace(/^-\s+/, '').replace(/\s+-$/, '').trim();
+        return txt;
       }
 
-      // Nếu chưa cắt bằng sep, xem trường hợp i bắt đầu đúng bằng s (không có sep)
-      if (!trimmed && iLower.startsWith(sLower) && iLower.length > sLower.length) {
-        const rest = i.slice(s.length).replace(/^[-–—:]\s*/, '').trim();
-        if (rest) i = rest;      // chỉ nhận nếu còn nội dung
-      }
-    }
-
-    // Nếu vì bất kỳ lý do gì i rỗng → giữ nguyên như s để "Mục nhỏ" không bị trống
-    if (!i) {
-      i = s;
-    }
-
-    // Gán lại text đã làm sạch
-    tdSection.textContent = s;
-    tdItem.textContent    = i;
-
-  });
-  // Nếu header dùng đơn vị giây (s) → chuyển sang phút và đổi số
-  try {
-    const thead = viewContent.querySelector('thead');
-    if (thead && thead.textContent && thead.textContent.indexOf('(s)') !== -1) {
-      // đổi header từ (s) → (phút)
-      thead.querySelectorAll('th').forEach(th => {
-        th.textContent = th.textContent.replace(/\(s\)/ig, '(phút)');
-      });
-
-      // chuyển các ô cột Từ/Đến từ giây -> phút (làm tròn xuống)
       rows.forEach(tr => {
-        for (let ci = 0; ci <= 1; ci++) {
-          const cell = tr.cells?.[ci];
-          if (!cell) continue;
-          const txt = (cell.textContent || '').trim();
-          const n = parseInt(txt, 10);
-          if (!isNaN(n)) {
-            const m = Math.floor(n / 60);
-            cell.textContent = String(m);
+        const tdSection = tr.cells?.[0];
+        const tdItem = tr.cells?.[1];
+
+        if (!tdSection || !tdItem) return;
+
+        // Làm sạch chung
+        let s = stripCodes(tdSection.textContent || '');
+        let i = stripCodes(tdItem.textContent || '');
+
+        // Bỏ phần lặp "Mục lớn" trong "Mục nhỏ" nhưng KHÔNG để trống "Mục nhỏ"
+        const sLower = s.toLowerCase();
+        let iLower = i.toLowerCase();
+
+        if (sLower) {
+          // Các phân cách thường gặp sau phần lặp
+          const seps = [' - ', ' — ', ': ', ' – ', ' —', '-', ':'];
+          let trimmed = false;
+
+          for (const sep of seps) {
+            const prefix = sLower + sep.toLowerCase();
+            if (iLower.startsWith(prefix)) {
+              const rest = i.slice(prefix.length).trim();
+              if (rest) {            // chỉ cắt khi có phần dư
+                i = rest;
+                iLower = i.toLowerCase();
+                trimmed = true;
+              }
+              break;                  // gặp 1 sep là dừng
+            }
+          }
+
+          // Nếu chưa cắt bằng sep, xem trường hợp i bắt đầu đúng bằng s (không có sep)
+          if (!trimmed && iLower.startsWith(sLower) && iLower.length > sLower.length) {
+            const rest = i.slice(s.length).replace(/^[-–—:]\s*/, '').trim();
+            if (rest) i = rest;      // chỉ nhận nếu còn nội dung
           }
         }
+
+        // Nếu vì bất kỳ lý do gì i rỗng → giữ nguyên như s để "Mục nhỏ" không bị trống
+        if (!i) {
+          i = s;
+        }
+
+        // Gán lại text đã làm sạch
+        tdSection.textContent = s;
+        tdItem.textContent = i;
+
       });
-    }
-  } catch (e) { console.warn('[tpl-view] convert seconds->minutes failed', e); }
+      // Nếu header dùng đơn vị giây (s) → chuyển sang phút và đổi số
+      try {
+        const thead = viewContent.querySelector('thead');
+        if (thead && thead.textContent && thead.textContent.indexOf('(s)') !== -1) {
+          // đổi header từ (s) → (phút)
+          thead.querySelectorAll('th').forEach(th => {
+            th.textContent = th.textContent.replace(/\(s\)/ig, '(phút)');
+          });
+
+          // chuyển các ô cột Từ/Đến từ giây -> phút (làm tròn xuống)
+          rows.forEach(tr => {
+            for (let ci = 0; ci <= 1; ci++) {
+              const cell = tr.cells?.[ci];
+              if (!cell) continue;
+              const txt = (cell.textContent || '').trim();
+              const n = parseInt(txt, 10);
+              if (!isNaN(n)) {
+                const m = Math.floor(n / 60);
+                cell.textContent = String(m);
+              }
+            }
+          });
+        }
+      } catch (e) { console.warn('[tpl-view] convert seconds->minutes failed', e); }
       // mở modal
       viewModal.style.display = 'flex';
     });
-  // ==== Modal: Xem giám khảo chấm ====
-  (function initJudgeView() {
-    const modal = document.getElementById('judge-view-modal');
-    const content = document.getElementById('judgev-content');
-    const closeBtn = document.getElementById('judgev-close');
-    if (!modal || !content) return;
+    // ==== Modal: Xem giám khảo chấm ====
+    (function initJudgeView() {
+      const modal = document.getElementById('judge-view-modal');
+      const content = document.getElementById('judgev-content');
+      const closeBtn = document.getElementById('judgev-close');
+      if (!modal || !content) return;
 
-    function openJudgeModal(btid) {
-      const holder = document.getElementById(`assigned-${btid}`);
-      const assigned = (holder?.dataset.assigned || '')
-                        .split(',').map(s => s.trim()).filter(Boolean);
-      const set = new Set(assigned);
-      let dirty = false; // whether user changed selection
+      function openJudgeModal(btid) {
+        const holder = document.getElementById(`assigned-${btid}`);
+        const assigned = (holder?.dataset.assigned || '')
+          .split(',').map(s => s.trim()).filter(Boolean);
+        const set = new Set(assigned);
+        let dirty = false; // whether user changed selection
 
-      const rows = (window.ALL_JUDGES || []).map((j) => {
-        const checked = set.has(j.code);
-        // make checkbox editable; attach change handler to mark dirty
-        const inputId = `chk-${btid}-${j.code}`;
-        return `
+        const rows = (window.ALL_JUDGES || []).map((j) => {
+          const checked = set.has(j.code);
+          // make checkbox editable; attach change handler to mark dirty
+          const inputId = `chk-${btid}-${j.code}`;
+          return `
           <tr>
               <td style="width:40px; text-align:center">
                 <input id="${inputId}" type="checkbox" ${checked ? 'checked' : ''}>
@@ -562,17 +562,17 @@ if (fileTemplate) {
               <td>${j.name || ''}</td>
             </tr>
         `;
-      }).join('');
+        }).join('');
 
-      // Set modal title to the bài thi name when available
-      try {
-        const titleEl = document.getElementById('judgev-title');
-        if (titleEl) titleEl.textContent = holder?.dataset.title || 'Giám khảo chấm';
-      } catch (e) { /* ignore */ }
+        // Set modal title to the bài thi name when available
+        try {
+          const titleEl = document.getElementById('judgev-title');
+          if (titleEl) titleEl.textContent = holder?.dataset.title || 'Giám khảo chấm';
+        } catch (e) { /* ignore */ }
 
-      // Use a colgroup with fixed widths so header and body columns align exactly.
-      // First column (checkbox) small, second (code) medium, third (name) flexible.
-      content.innerHTML = `
+        // Use a colgroup with fixed widths so header and body columns align exactly.
+        // First column (checkbox) small, second (code) medium, third (name) flexible.
+        content.innerHTML = `
         <table class="table" style="width:100%; table-layout:fixed;">
           <colgroup>
           <col style="width:120px"> 
@@ -597,105 +597,105 @@ if (fileTemplate) {
         </table>
       `;
 
-      const btnSelectAll = document.getElementById('judge-select-all-btn');
-      const itemCheckboxes = Array.from(
-        content.querySelectorAll('tbody input[type="checkbox"]')
-      );
-
-      itemCheckboxes.forEach(cb => cb.removeAttribute('disabled'));
-
-      function isAllChecked() {
-        return itemCheckboxes.length > 0 && itemCheckboxes.every(cb => cb.checked);
-      }
-
-      btnSelectAll?.addEventListener('click', () => {
-        const targetState = !isAllChecked();
-        itemCheckboxes.forEach(cb => { cb.checked = targetState; });
-        dirty = true;
-      });
-
-      itemCheckboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-          dirty = true;
-        });
-      });
-
-      closeBtn.onclick = async function () {
-        if (!dirty) {
-          modal.style.display = 'none';
-          return;
-        }
-
-        const checkedCodes = Array.from(
-          content.querySelectorAll('tbody input[type="checkbox"]:checked')
-        ).map(cb =>
-          cb.closest('tr').querySelector('td:nth-child(2)').textContent.trim()
+        const btnSelectAll = document.getElementById('judge-select-all-btn');
+        const itemCheckboxes = Array.from(
+          content.querySelectorAll('tbody input[type="checkbox"]')
         );
 
-        const initial = Array.from(set);
-        const same = initial.length === checkedCodes.length &&
-          initial.every(v => checkedCodes.includes(v));
+        itemCheckboxes.forEach(cb => cb.removeAttribute('disabled'));
 
-        if (same) {
-          modal.style.display = 'none';
-          return;
+        function isAllChecked() {
+          return itemCheckboxes.length > 0 && itemCheckboxes.every(cb => cb.checked);
         }
 
-        // helper lấy csrf từ cookie
-        function getCookie(name) {
-          const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-          return v ? v.pop() : '';
-        }
+        btnSelectAll?.addEventListener('click', () => {
+          const targetState = !isAllChecked();
+          itemCheckboxes.forEach(cb => { cb.checked = targetState; });
+          dirty = true;
+        });
 
-        try {
-          const formBody = new URLSearchParams();
-          formBody.append('action', 'update_assignments');
-          formBody.append('baiThi_id', String(btid));
-          checkedCodes.forEach(code => formBody.append('judges', code));
-
-          const res = await fetch(window.location.pathname, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-              'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: formBody.toString(),
+        itemCheckboxes.forEach(cb => {
+          cb.addEventListener('change', () => {
+            dirty = true;
           });
+        });
 
-          const dataText = await res.text();
-          let data = {};
-          try { data = JSON.parse(dataText); } catch (err) { /* not JSON */ }
-
-          if (res.ok && data.ok) {
-            if (holder) holder.dataset.assigned = checkedCodes.join(',');
+        closeBtn.onclick = async function () {
+          if (!dirty) {
             modal.style.display = 'none';
-          } else {
-            alert('Cập nhật phân công thất bại: ' + (data.message || res.statusText || dataText));
+            return;
           }
-        } catch (e) {
-          alert('Lỗi khi cập nhật phân công: ' + e.message);
-        }
-      };
 
-      modal.style.display = 'flex';
-    }
+          const checkedCodes = Array.from(
+            content.querySelectorAll('tbody input[type="checkbox"]:checked')
+          ).map(cb =>
+            cb.closest('tr').querySelector('td:nth-child(2)').textContent.trim()
+          );
 
-    document.body.addEventListener('click', (e) => {
-      const btn = e.target.closest?.('[data-open-judge-view]');
-      if (!btn) return;
-      const btid = btn.getAttribute('data-btid');
-      openJudgeModal(btid);
+          const initial = Array.from(set);
+          const same = initial.length === checkedCodes.length &&
+            initial.every(v => checkedCodes.includes(v));
 
-      const kebabMenu = btn.closest('.kebab')?.querySelector('.kebab-menu');
-      if (kebabMenu) kebabMenu.style.display = 'none';
-    });
+          if (same) {
+            modal.style.display = 'none';
+            return;
+          }
 
-    closeBtn?.addEventListener('click', () => { modal.style.display = 'none'; });
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-  })();
+          // helper lấy csrf từ cookie
+          function getCookie(name) {
+            const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return v ? v.pop() : '';
+          }
+
+          try {
+            const formBody = new URLSearchParams();
+            formBody.append('action', 'update_assignments');
+            formBody.append('baiThi_id', String(btid));
+            checkedCodes.forEach(code => formBody.append('judges', code));
+
+            const res = await fetch(window.location.pathname, {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-CSRFToken': getCookie('csrftoken'),
+              },
+              body: formBody.toString(),
+            });
+
+            const dataText = await res.text();
+            let data = {};
+            try { data = JSON.parse(dataText); } catch (err) { /* not JSON */ }
+
+            if (res.ok && data.ok) {
+              if (holder) holder.dataset.assigned = checkedCodes.join(',');
+              modal.style.display = 'none';
+            } else {
+              alert('Cập nhật phân công thất bại: ' + (data.message || res.statusText || dataText));
+            }
+          } catch (e) {
+            alert('Lỗi khi cập nhật phân công: ' + e.message);
+          }
+        };
+
+        modal.style.display = 'flex';
+      }
+
+      document.body.addEventListener('click', (e) => {
+        const btn = e.target.closest?.('[data-open-judge-view]');
+        if (!btn) return;
+        const btid = btn.getAttribute('data-btid');
+        openJudgeModal(btid);
+
+        const kebabMenu = btn.closest('.kebab')?.querySelector('.kebab-menu');
+        if (kebabMenu) kebabMenu.style.display = 'none';
+      });
+
+      closeBtn?.addEventListener('click', () => { modal.style.display = 'none'; });
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+    })();
 
     viewClose?.addEventListener('click', () => viewModal.style.display = 'none');
     viewModal.addEventListener('click', (e) => {
@@ -705,10 +705,57 @@ if (fileTemplate) {
     console.warn('[tpl-view] modal elements not found');
   }
 
-    console.log('[organize] JS ready');
-  const $modal  = document.getElementById('confirmModal');
-  const $msg    = document.getElementById('confirmMessage');
-  const $ok     = document.getElementById('confirmOk');
+  // Toggle hiển thị Top X & nút submit cho Chế độ BGD
+  document.querySelectorAll('input[name="is_bgd_round"]').forEach(function (chk) {
+    var form = chk.closest('form');
+    if (!form) return;
+
+    var topInput = form.querySelector('.bgd-top-input');
+    var btn = form.querySelector('.bgd-submit-btn');
+
+    // Trạng thái ban đầu khi load trang
+    if (chk.checked) {
+      if (topInput) topInput.style.display = 'block';
+      if (btn) btn.style.display = 'block';
+    }
+
+    chk.addEventListener('change', function () {
+      if (!topInput || !btn) return;
+      if (chk.checked) {
+        topInput.style.display = 'block';
+        btn.style.display = 'block';
+      } else {
+        topInput.style.display = 'none';
+        btn.style.display = 'none';
+      }
+    });
+  });
+
+  console.log('[organize] JS ready');
+
+  // Toggle BGD mode UI
+  document.querySelectorAll('input[name="is_bgd_round"]').forEach(chk => {
+    chk.addEventListener('change', () => {
+      const form = chk.closest('form');
+      const inp = form.querySelector('.bgd-top-input');
+      const btn = form.querySelector('.bgd-submit-btn');
+
+      if (chk.checked) {
+        inp.style.display = 'block';
+        btn.style.display = 'block';
+      } else {
+        inp.style.display = 'none';
+        btn.style.display = 'none';
+      }
+    });
+  });
+
+  console.log('[organize] JS ready');
+
+
+  const $modal = document.getElementById('confirmModal');
+  const $msg = document.getElementById('confirmMessage');
+  const $ok = document.getElementById('confirmOk');
   const $cancel = document.getElementById('confirmCancel');
 
   if ($modal && $msg && $ok && $cancel) {
@@ -730,49 +777,49 @@ if (fileTemplate) {
     });
 
     // 1) Đổi tên
-  // ===== XÁC NHẬN CHỈ CHO FORM CẬP NHẬT (trong bảng) =====
-  document.querySelectorAll('form.js-update-form input[name="tenCuocThi"]').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const form = e.target.closest('form.js-update-form');
-      const init = e.target.dataset.init || '';
-      const now  = e.target.value.trim();
-      if (now === init) return;
-      openConfirm(`Đổi tên cuộc thi từ “${init}” → “${now}”?`,
-        () => form.submit(),
-        () => { e.target.value = init; }
-      );
-    });
-  });
-
-  document.querySelectorAll('form.js-update-form input[name="trangThai"]').forEach(chk => {
-    chk.addEventListener('change', (e) => {
-      const form = e.target.closest('form.js-update-form');
-      const init = (e.target.dataset.init === '1');
-      const now  = e.target.checked;
-      if (now === init) return;
-      openConfirm(`Xác nhận ${now ? 'BẬT' : 'TẮT'} cuộc thi này?`,
-        () => form.submit(),
-        () => { e.target.checked = init; }
-      );
-    });
-  });
-
-  // ===== FORM TẠO MỚI: CHỈ HỎI XÁC NHẬN KHI BẤM NÚT "TẠO" =====
-  const createForm = document.getElementById('create-form');
-  if (createForm) {
-    let allowSubmit = false;
-    createForm.addEventListener('submit', function (e) {
-      if (allowSubmit) return;            // lần 2: cho qua
-      e.preventDefault();                 // chặn submit lần đầu để mở popup
-      const ten = (createForm.querySelector('input[name="tenCuocThi"]')?.value || '').trim();
-      const on  = createForm.querySelector('input[name="trangThai"]')?.checked;
-      const msg = `Tạo cuộc thi “${ten || '(không tên)'}”${on ? ' (BẬT ngay)' : ''}?`;
-      openConfirm(msg, () => {
-        allowSubmit = true;               // bật cờ để submit thật
-        createForm.submit();
+    // ===== XÁC NHẬN CHỈ CHO FORM CẬP NHẬT (trong bảng) =====
+    document.querySelectorAll('form.js-update-form input[name="tenCuocThi"]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const form = e.target.closest('form.js-update-form');
+        const init = e.target.dataset.init || '';
+        const now = e.target.value.trim();
+        if (now === init) return;
+        openConfirm(`Đổi tên cuộc thi từ “${init}” → “${now}”?`,
+          () => form.submit(),
+          () => { e.target.value = init; }
+        );
       });
     });
-  }
+
+    document.querySelectorAll('form.js-update-form input[name="trangThai"]').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        const form = e.target.closest('form.js-update-form');
+        const init = (e.target.dataset.init === '1');
+        const now = e.target.checked;
+        if (now === init) return;
+        openConfirm(`Xác nhận ${now ? 'BẬT' : 'TẮT'} cuộc thi này?`,
+          () => form.submit(),
+          () => { e.target.checked = init; }
+        );
+      });
+    });
+
+    // ===== FORM TẠO MỚI: CHỈ HỎI XÁC NHẬN KHI BẤM NÚT "TẠO" =====
+    const createForm = document.getElementById('create-form');
+    if (createForm) {
+      let allowSubmit = false;
+      createForm.addEventListener('submit', function (e) {
+        if (allowSubmit) return;            // lần 2: cho qua
+        e.preventDefault();                 // chặn submit lần đầu để mở popup
+        const ten = (createForm.querySelector('input[name="tenCuocThi"]')?.value || '').trim();
+        const on = createForm.querySelector('input[name="trangThai"]')?.checked;
+        const msg = `Tạo cuộc thi “${ten || '(không tên)'}”${on ? ' (BẬT ngay)' : ''}?`;
+        openConfirm(msg, () => {
+          allowSubmit = true;               // bật cờ để submit thật
+          createForm.submit();
+        });
+      });
+    }
 
 
     // tuỳ chọn: expose nếu muốn gọi tay trong console
@@ -789,7 +836,7 @@ if (fileTemplate) {
       if (act !== 'create_bt') return;
 
       const methodSel = f.querySelector('select[name="phuongThucCham"]');
-      const maxInput  = f.querySelector('input[name="cachChamDiem"]');
+      const maxInput = f.querySelector('input[name="cachChamDiem"]');
 
       function clearError(el) {
         if (!el) return;
@@ -812,7 +859,7 @@ if (fileTemplate) {
       }
 
       // gỡ lỗi khi người dùng thay đổi
-      ['change','input'].forEach(evt => {
+      ['change', 'input'].forEach(evt => {
         maxInput && maxInput.addEventListener(evt, () => clearError(maxInput));
         methodSel && methodSel.addEventListener(evt, () => clearError(maxInput));
       });
@@ -835,41 +882,41 @@ if (fileTemplate) {
       });
     });
   })();
-// ===== Đổi tên VÒNG THI: tự bật popup khi rời input (sự kiện change) =====
-(function initRenameVTConfirm() {
-  if (typeof window.openConfirm !== 'function') return;
+  // ===== Đổi tên VÒNG THI: tự bật popup khi rời input (sự kiện change) =====
+  (function initRenameVTConfirm() {
+    if (typeof window.openConfirm !== 'function') return;
 
-  document.querySelectorAll('form.js-rename-vt-form input[name="tenVongThi"]').forEach((input) => {
-    const form = input.closest('form.js-rename-vt-form');
-    if (!form) return;
+    document.querySelectorAll('form.js-rename-vt-form input[name="tenVongThi"]').forEach((input) => {
+      const form = input.closest('form.js-rename-vt-form');
+      if (!form) return;
 
-    let lastConfirmed = (input.dataset.init || input.value || '').trim();
+      let lastConfirmed = (input.dataset.init || input.value || '').trim();
 
-    input.addEventListener('change', () => {
-      const now = (input.value || '').trim();
+      input.addEventListener('change', () => {
+        const now = (input.value || '').trim();
 
-      // Không đổi hoặc người dùng xoá trắng -> trả về giá trị đã xác nhận
-      if (!now || now === lastConfirmed) {
-        input.value = lastConfirmed;
-        return;
-      }
-
-      const msg = `Bạn có muốn đổi tên vòng thi:\n“${lastConfirmed}” → “${now}”?`;
-      openConfirm(
-        msg,
-        // OK -> submit form rename_vt
-        () => {
-          lastConfirmed = now;
-          form.submit();
-        },
-        // Cancel -> khôi phục
-        () => {
+        // Không đổi hoặc người dùng xoá trắng -> trả về giá trị đã xác nhận
+        if (!now || now === lastConfirmed) {
           input.value = lastConfirmed;
+          return;
         }
-      );
+
+        const msg = `Bạn có muốn đổi tên vòng thi:\n“${lastConfirmed}” → “${now}”?`;
+        openConfirm(
+          msg,
+          // OK -> submit form rename_vt
+          () => {
+            lastConfirmed = now;
+            form.submit();
+          },
+          // Cancel -> khôi phục
+          () => {
+            input.value = lastConfirmed;
+          }
+        );
+      });
     });
-  });
-})();
+  })();
 
   // === Thu gọn / mở rộng Vòng thi ===
   (function initToggleVT() {
@@ -995,7 +1042,7 @@ if (fileTemplate) {
         const txt = await res.text();
         console.log(txt);
 
-        location.reload();  
+        location.reload();
       } catch (err) {
         alert("Không thể xóa bài thi: " + err.message);
       }

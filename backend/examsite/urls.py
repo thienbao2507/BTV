@@ -59,10 +59,10 @@ urlpatterns = [
     path("export-xlsx", export_xlsx, name="export-xlsx"),
     path("import/", import_view, name="import"),
     path("bgd/", bgd_list, name="bgd-list"),                     # NEW: /bgd = danh sách
-    path("bgd/qr/", bgd_qr_index, name="bgd-qr"),                # cũ: xoay vòng tất cả
-    path("bgd/qr/<str:token>/", bgd_qr_index, name="bgd-qr-one"),
-    path("bgd/qr/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
-    path("bgd/go/<str:token>/", bgd_go, name="bgd-go"),
+    path("bgd/qr/", bgd_qr_index, name="bgd-qr"),                # list QR
+    path("bgd/qr/<str:token>/", bgd_qr_index, name="bgd-qr-one"),  # focus 1 BGD trong list
+    path("bgd/qr/<int:ct_id>/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
+    path("bgd/go/<int:ct_id>/<str:token>/", bgd_go, name="bgd-go"),
     path("bgd/api/save-score/", bgd_save_score, name="bgd-save-score"),
     path("bgd/battle/<str:token>/", bgd_battle_go, name="bgd-battle-go"),
     path("score/bgd/", score_bgd_view, name="score-bgd"),

@@ -93,8 +93,8 @@ def _flatten(ct: CuocThi):
     # Info columns bạn đang dùng
     info_titles = ['Đơn vị', 'Chi nhánh', 'Vùng', 'Nhóm', 'Email']
 
-    # Xây tiêu đề tổng cộng: 3 cột info cơ bản + 5 info + (cặp Điểm/Thời gian)* + Tổng
-    columns = ['STT', 'Mã NV', 'Họ tên'] + info_titles + titles_per_exam + ['Tổng']
+    # Xây tiêu đề tổng cộng: 3 cột info cơ bản + 5 info + (cặp Điểm/Thời gian)* + Tổng + Tổng thời gian
+    columns = ['STT', 'Mã NV', 'Họ tên'] + info_titles + titles_per_exam + ['Tổng', 'Tổng thời gian']
 
 
     # Map điểm trung bình theo (maNV, baiThi_id)
@@ -124,10 +124,12 @@ def _flatten(ct: CuocThi):
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
     def _sv(x): return "" if x is None else str(x)
 
-    rows = []
-    for idx, ts in enumerate(ts_qs, start=1):
+    # Gom dữ liệu để sort theo Tổng điểm (giảm dần) + Tổng thời gian (tăng dần)
+    data = []
+
+    for ts in ts_qs:
         row = [
-            idx,
+            None,  # STT sẽ gán sau khi sort
             _sv(getattr(ts, "maNV", "")),
             _sv(getattr(ts, "hoTen", "")),
             _sv(getattr(ts, "donVi", "")),
@@ -137,7 +139,9 @@ def _flatten(ct: CuocThi):
             _sv(getattr(ts, "email", "")),
         ]
 
-        total = 0.0
+        total_score = 0.0
+        total_time_sec = 0
+        has_any_time = False
 
         # chỉ lấy mỗi bài thi 1 lần (theo các cột 'score')
         bt_ids_in_order = [c["id"] for c in cols_meta if c.get("kind") == "score"]
@@ -147,16 +151,50 @@ def _flatten(ct: CuocThi):
             sc = score_map.get((ts.maNV, bt_id), "")
             row.append(sc)
             if isinstance(sc, (int, float)):
-                total += float(sc)
+                total_score += float(sc)
 
             # 2) thời gian (mm:ss) – để trống nếu không có
             tm_seconds = time_map.get((ts.maNV, bt_id))
             row.append(_fmt_mmss(tm_seconds))
+            if tm_seconds is not None:
+                has_any_time = True
+                total_time_sec += tm_seconds
 
-        row.append(total)
-        rows.append(row)
+        # Cột Tổng điểm
+        row.append(total_score)
+        # Cột Tổng thời gian (mm:ss) – nếu không có thời gian nào thì để trống
+        row.append(_fmt_mmss(total_time_sec) if has_any_time else "")
+
+        data.append({
+            "ts": ts,
+            "row": row,
+            "total_score": float(total_score),
+            "total_time_sec": total_time_sec if has_any_time else None,
+        })
+
+    # Sort:
+    # 1) Tổng điểm: giảm dần
+    # 2) Nếu bằng Tổng điểm -> Tổng thời gian: tăng dần (ít thời gian hơn xếp trên)
+    # 3) Cuối cùng sort theo Mã NV cho ổn định
+    def _time_key(seconds):
+        return seconds if seconds is not None else float("inf")
+
+    data.sort(
+        key=lambda d: (
+            -d["total_score"],
+            _time_key(d["total_time_sec"]),
+            _sv(getattr(d["ts"], "maNV", "")),
+        )
+    )
+
+    # Gán lại STT theo thứ tự sau khi sort
+    rows = []
+    for idx, item in enumerate(data, start=1):
+        item["row"][0] = idx
+        rows.append(item["row"])
 
     return columns, rows
+
 
 
 # (Giữ export_page như cũ)
@@ -191,17 +229,30 @@ def export_xlsx(request):
         info_count = 3 + 5
         kinds = ["info"] * len(columns)
 
-        j = info_count
-        # duyệt tới cột áp chót (cột cuối là "Tổng")
-        while j < len(columns) - 1:
-            # cặp 1: điểm
-            kinds[j] = "score"
-            j += 1
-            if j < len(columns) - 1:
-                # cặp 2: thời gian
-                kinds[j] = "time"
+        total_cols = len(columns)
+        # ít nhất: info (8 cột) + 2 cột tổng
+        if total_cols >= info_count + 2:
+            j = info_count
+            last_score_idx = total_cols - 2  # index của cột "Tổng"
+
+            # Các cặp Điểm/Thời gian theo từng bài thi
+            while j < last_score_idx:
+                kinds[j] = "score"   # cột Điểm
                 j += 1
-        kinds[-1] = "score"   # "Tổng"
+                if j < last_score_idx:
+                    kinds[j] = "time"   # cột Thời gian
+                    j += 1
+
+            # Hai cột cuối: "Tổng" + "Tổng thời gian"
+            kinds[-2] = "score"  # Tổng
+            kinds[-1] = "time"   # Tổng thời gian
+        else:
+            # fallback an toàn nếu cấu trúc columns khác kỳ vọng
+            j = info_count
+            while j < total_cols:
+                kinds[j] = "score"
+                j += 1
+
 
 
     wb = Workbook()
@@ -383,29 +434,53 @@ def _final_columns_and_rows(ct: CuocThi):
     # 5) Duyệt thí sinh của CT & build rows
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
 
-
     def _sv(x): return "" if x is None else str(x)
 
-    rows = []
-    rows = []
-    for idx, ts in enumerate(ts_qs, start=1):
-        # Tổng điểm từ phiếu chấm (các bài thi khác)
-        base_total = float(total_by_ma.get(ts.maNV, 0.0) or 0.0)
-
+    # Gom dữ liệu thô để sắp xếp trước
+    data = []
+    for ts in ts_qs:
         # Đối kháng
         sao = stars_by_ma.get(ts.maNV, None)
         sao_fmt = (f"{sao:.1f}" if sao is not None else "")
+        sao_val = float(sao or 0.0)
 
         # Tim
         tim = hearts_by_ma.get(ts.maNV, 0)
 
         # Soán ngôi (AVG điểm BGD)
         soan = soan_by_ma.get(ts.maNV, None)
-        soan_fmt = (f"{soan:.1f}" if soan is not None else "")
+        soan_fmt = (f"{soan:.2f}" if soan is not None else "")
+        soan_val = float(soan or 0.0)
 
-        # Tổng điểm hiển thị = điểm từ phiếu + điểm Soán ngôi
-        total_display = round(base_total + (soan or 0.0), 2)
+        # Tổng điểm hiển thị = Soán ngôi + Đối kháng
+        total_display = round(soan_val + sao_val, 2)
 
+        data.append({
+            "ts": ts,
+            "sao_fmt": sao_fmt,
+            "sao_val": sao_val,
+            "tim": tim,
+            "soan_fmt": soan_fmt,
+            "soan_val": soan_val,
+            "total": total_display,
+        })
+
+    # Sort mặc định:
+    # 1) Tổng điểm giảm dần
+    # 2) Nếu bằng nhau -> Tim giảm dần
+    # 3) Cuối cùng sort theo Mã NV cho ổn định
+    data.sort(
+        key=lambda d: (
+            -d["total"],
+            -d["tim"],
+            _sv(getattr(d["ts"], "maNV", "")),
+        )
+    )
+
+    # Build rows sau khi đã sort
+    rows = []
+    for idx, item in enumerate(data, start=1):
+        ts = item["ts"]
         row = [
             idx,
             _sv(getattr(ts, "maNV", "")),
@@ -415,13 +490,11 @@ def _final_columns_and_rows(ct: CuocThi):
             _sv(getattr(ts, "vung", "")),
             _sv(getattr(ts, "nhom", "")),
             _sv(getattr(ts, "email", "")),
-            sao_fmt,        # Đối kháng
-            tim,            # Tim
-            soan_fmt,       # Soán ngôi
-            total_display,  # Tổng điểm = base_total + soán ngôi
+            item["sao_fmt"],     # Đối kháng
+            item["tim"],         # Tim
+            item["soan_fmt"],    # Soán ngôi
+            item["total"],       # Tổng điểm = Soán ngôi + Đối kháng
         ]
-
-
         rows.append(row)
 
     return columns, rows

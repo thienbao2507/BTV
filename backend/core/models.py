@@ -164,6 +164,18 @@ class VongThi(models.Model):
         help_text="Điểm cộng cho người thắng trong vòng đặc biệt (thua = 0)."
     )
 
+    # Vòng dành cho Ban Giám Đốc chấm Top X
+    is_bgd_round = models.BooleanField(
+        default=False,
+        help_text="Nếu bật, vòng này dùng để chọn Top X thí sinh đưa sang trang BGD GO."
+    )
+    
+    bgd_top_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Số lượng Top X sẽ lấy từ vòng trước (ví dụ 10, 5...)."
+    )
+
     def save(self, *args, **kwargs):
         if not self.ma:
             self.ma = generate_code(VongThi, "VT")
@@ -171,7 +183,6 @@ class VongThi(models.Model):
 
     def __str__(self):
         return f"{self.ma} - {self.tenVongThi}"
-
 
 
 class BaiThi(models.Model):

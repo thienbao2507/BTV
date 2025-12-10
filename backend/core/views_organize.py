@@ -145,6 +145,44 @@ def organize_view(request, ct_id=None):
                 )
                 return redirect(request.path)
 
+# Cấu hình vòng dành cho BGD (chọn Top X đưa sang trang BGD GO)
+            if action == "config_vt_bgd":
+                vt_id = request.POST.get("vongThi_id")
+                if not vt_id:
+                    messages.error(request, "Thiếu ID vòng thi.")
+                    return redirect(request.path)
+
+                try:
+                    vt = VongThi.objects.get(id=vt_id)
+                except VongThi.DoesNotExist:
+                    messages.error(request, "Vòng thi không tồn tại.")
+                    return redirect(request.path)
+
+                # Checkbox on/off
+                is_on = bool(request.POST.get("is_bgd_round"))
+                top_raw = (request.POST.get("bgd_top_limit") or "").strip()
+
+                if is_on:
+                    try:
+                        top_limit = int(top_raw)
+                        if top_limit <= 0:
+                            raise ValueError
+                    except ValueError:
+                        messages.error(request, "Vui lòng nhập số Top hợp lệ (>= 1).")
+                        return redirect(request.path)
+                else:
+                    top_limit = None
+
+                vt.is_bgd_round = is_on
+                vt.bgd_top_limit = top_limit
+                vt.save(update_fields=["is_bgd_round", "bgd_top_limit"])
+
+                messages.success(
+                    request,
+                    f"Đã cập nhật chế độ BGD cho vòng “{vt.tenVongThi}”."
+                )
+                return redirect(request.path)
+
 
             # --------------------------------------------------
             # Tạo cặp từ Top 20 vòng trước (vòng đặc biệt)
