@@ -6,12 +6,43 @@
 {% block content %}
 
 <style>
+  /* Sao đang ON (được chọn) – giữ class cũ để JS không phải sửa */
   .bgd-star-on {
-    background-color: rgba(251, 191, 36, 0.2);
-    color: #fbbf24;
-    border-color: rgba(251, 191, 36, 0.9);
+    background-color: transparent;
+    color: inherit;
+    border-color: transparent;
+  }
+
+  /* Style nút sao giống trang index */
+  .bgd-star-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bgd-star-btn .star-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: grayscale(100%) brightness(0.75);
+    opacity: .55;
+    transition: filter .15s ease, opacity .15s ease, transform .12s ease;
+  }
+
+  /* Khi sao được chọn (JS gắn class bgd-star-on) thì sáng giống index */
+  .bgd-star-btn.bgd-star-on .star-icon {
+    filter: none;
+    opacity: 1;
+    transform: scale(1.05);
   }
 </style>
+
 <div class="pt-5 pb-6 px-3 min-h-[100vh] flex flex-col">
 
   <div class="mb-4 text-center text-slate-100">
@@ -73,9 +104,9 @@
                   <div class="flex gap-2" data-role="star-group" data-ts-index="{{ forloop.counter0 }}">
                     {% for _ in "12345" %}
                     <button type="button"
-                      class="w-8 h-8 flex items-center justify-center rounded-full border border-amber-400/40 text-sm text-amber-300 bg-transparent hover:bg-amber-500/20 transition bgd-star-btn"
+                      class="bgd-star-btn"
                       data-role="star">
-                      ★
+                      <img src="{% static 'pics/star.png' %}" alt="sao" class="star-icon">
                     </button>
                     {% endfor %}
                   </div>
@@ -84,16 +115,13 @@
                 </div>
               </div>
 
-
               <div class="w-full mt-4 flex justify-center">
                 <button type="button"
                   class="inline-flex items-center justify-center rounded-full bg-white px-6 py-2 text-sm font-semibold text-slate-900 shadow-md active:scale-95 transition"
                   data-role="save-score" data-ts-id="{{ ts.maNV }}" data-ts-index="{{ forloop.counter0 }}">
                   Lưu điểm
                 </button>
-
               </div>
-
 
             </div>
           </div>
