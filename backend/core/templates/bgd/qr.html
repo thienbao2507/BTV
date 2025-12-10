@@ -1,7 +1,6 @@
 {% load static %}
 <!doctype html>
 <html lang="vi">
-
 <head>
   <meta charset="utf-8">
   <title>QR Ban Giám Đốc</title>
@@ -12,32 +11,26 @@
       --muted: #9aa3b2;
       --panel: #0f172a;
     }
+    * { box-sizing: border-box; }
 
-    html,
-    body {
-      height: 100%;
-    }
-
-    body {
+    html, body {
       margin: 0;
-      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial;
+      padding: 0;
+      min-height: 100%;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0b1120, #020617 60%);
       color: var(--fg);
-      background: #0b1020;
       display: flex;
       align-items: center;
-      /* canh giữa theo chiều dọc */
       justify-content: center;
-      /* canh giữa theo chiều ngang */
+      padding: 24px;
     }
-
     .wrap {
-      max-width: 750px;
       width: 100%;
-      padding: 16px;
-      /* bỏ margin 24px auto cũ để body flex canh giữa */
-      margin: 0 auto;
+      max-width: 1120px;
     }
-
     .card {
       background: linear-gradient(180deg, #1f2937cc, #111827cc);
       border: 1px solid #334155;
@@ -45,7 +38,6 @@
       padding: 16px;
       box-shadow: 0 10px 30px rgba(2, 6, 23, .45);
     }
-
     .row {
       display: flex;
       gap: 16px;
@@ -53,90 +45,127 @@
       justify-content: space-between;
       flex-wrap: wrap;
     }
-
     .qr-box {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       width: 720px;
-      height: 360px;
+      max-width: 100%;
       background: #fff;
       border-radius: 12px;
-      overflow: hidden;
+      padding: 24px 24px 16px;
     }
-
+    .qr-box-inner {
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 1 / 1;
+    }
+    .round-label {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #4b5563;
+      text-align: center;
+    }
     .meta {
       flex: 1;
       min-width: 220px;
     }
-
     .meta h2 {
       margin: 0 0 8px;
-      font-size: 22px;
+      font-size: 18px;
+      font-weight: 600;
     }
-
     .muted {
+      font-size: 13px;
       color: var(--muted);
-      font-size: 14px;
-      word-break: break-all;
     }
-
+    label {
+      font-size: 13px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    select {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 13px;
+    }
     .ctrls {
+      margin-top: 16px;
       display: flex;
-      gap: 10px;
-      margin-top: 14px;
+      gap: 8px;
     }
-
     .btn {
-      background: #1d4ed8;
-      color: #fff;
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
       cursor: pointer;
       text-decoration: none;
-      display: inline-block;
     }
-
     .btn.secondary {
-      background: #334155;
+      background: #e5e7eb;
+      color: #020617;
     }
-
     .index {
       margin-top: 8px;
       color: var(--muted);
       display: none;
     }
-
     img.qr {
       width: 100%;
       height: 100%;
       object-fit: contain;
     }
+    @media (max-width: 900px) {
+      .row {
+        flex-direction: column;
+      }
+      .qr-box {
+        width: 100%;
+      }
+    }
   </style>
 </head>
-
-<body data-ct-id="{% if current_ct %}{{ current_ct.id }}{% endif %}"
-      data-vt-id="{% if current_vt %}{{ current_vt.id }}{% endif %}">
-
+<body
+  data-ct-id="{% if current_ct %}{{ current_ct.id }}{% endif %}"
+  data-vt-id="{% if current_vt %}{{ current_vt.id }}{% endif %}"
+>
   <div class="wrap">
     <div class="card">
       <div class="row">
         <div class="qr-box">
-          <img id="qrImg" class="qr" alt="QR" src="" />
+          <div class="qr-box-inner">
+            <img id="qrImg" class="qr" alt="QR" src="" />
+          </div>
+          <div class="round-label" id="roundLabel">
+            {% if current_vt %}
+              Giám Đốc: {{ items.0.ten }} — {{ current_vt.tenVongThi }}
+            {% else %}
+              Không có vòng thi BGD được chọn
+            {% endif %}
+          </div>
         </div>
         <div class="meta">
           <h2 id="title">QR Ban Giám Đốc</h2>
-          <div class="muted" id="sub"></div>
+          <div class="muted" id="sub">
+            {% if current_ct %}
+              {{ current_ct.tenCuocThi }}
+            {% endif %}
+          </div>
 
           {% if competitions %}
           <div style="margin-top:12px;">
-            <label for="ctSelect" style="font-size:13px; display:block; margin-bottom:4px;">Chọn cuộc thi</label>
-            <input type="text" id="ctSearch" placeholder="Tìm theo tên..."
-              style="width:100%; padding:6px 8px; border-radius:8px; border:1px solid #1f2937; background:#020617; color:#e5e7eb; font-size:13px; margin-bottom:6px;">
-            <select id="ctSelect" name="ct"
-              style="width:100%; padding:6px 8px; border-radius:8px; border:1px solid #1f2937; background:#020617; color:#e5e7eb; font-size:13px;">
+            <label for="ctSelect">Chọn cuộc thi</label>
+            <select id="ctSelect" name="ct">
               {% for c in competitions %}
               <option value="{{ c.id }}" {% if current_ct and c.id == current_ct.id %}selected{% endif %}>
                 {{ c.tenCuocThi }}
@@ -146,13 +175,24 @@
           </div>
           {% endif %}
 
+          {% if rounds %}
+          <div style="margin-top:8px;">
+            <label for="vtSelect">Chọn vòng thi</label>
+            <select id="vtSelect" name="vt">
+              {% for v in rounds %}
+              <option value="{{ v.id }}" {% if current_vt and v.id == current_vt.id %}selected{% endif %}>
+                {{ v.tenVongThi }}{% if v.bgd_top_limit %} (Top {{ v.bgd_top_limit }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
           <div class="ctrls">
-            <!-- CHỈ GIỮ LẠI NÚT LƯU QR -->
             <a class="btn secondary" id="saveBtn" download="bgd-qr.png">Lưu QR</a>
           </div>
           <div class="index" id="idx"></div>
         </div>
-
       </div>
     </div>
   </div>
@@ -161,7 +201,7 @@
   <script>
     const items = JSON.parse(document.getElementById('bgd-items').textContent);
     const ctId = document.body.dataset.ctId || "";
-    const vtId = document.body.dataset.vtId || "";  
+    const vtId = document.body.dataset.vtId || "";
 
     const qrImg = document.getElementById('qrImg');
     const title = document.getElementById('title');
@@ -180,7 +220,7 @@
 
       const it = items[0];
 
-      let base = "";
+      let base = '';
       if (ctId && vtId) {
         base = `/bgd/qr/${ctId}/${vtId}/${it.token}.png`;
       } else if (ctId) {
@@ -188,37 +228,48 @@
       } else {
         base = `/bgd/qr/${it.token}.png`;
       }
+
       qrImg.src = base;
       title.textContent = `${it.maBGD} — ${it.ten}`;
       idxEl.textContent = '';
+      // Nút Lưu QR chỉ tải đúng ảnh đang hiển thị
       save.setAttribute('href', base);
       save.setAttribute('download', `QR_${it.maBGD}.png`);
     }
 
     const ctSelect = document.getElementById('ctSelect');
-    const ctSearch = document.getElementById('ctSearch');
+    const vtSelect = document.getElementById('vtSelect');
 
     if (ctSelect) {
       ctSelect.addEventListener('change', function () {
         const params = new URLSearchParams(window.location.search);
-        params.set('ct', ctSelect.value);
+        if (ctSelect.value) {
+          params.set('ct', ctSelect.value);
+        } else {
+          params.delete('ct');
+        }
+        // đổi cuộc thi thì reset vòng thi để backend tự chọn mặc định
+        params.delete('vt');
         window.location.search = params.toString();
       });
     }
 
-    if (ctSelect && ctSearch) {
-      ctSearch.addEventListener('input', function () {
-        const term = ctSearch.value.toLowerCase();
-        Array.from(ctSelect.options).forEach(function (opt) {
-          const match = opt.text.toLowerCase().includes(term);
-          opt.style.display = match ? '' : 'none';
-        });
+    if (vtSelect) {
+      vtSelect.addEventListener('change', function () {
+        const params = new URLSearchParams(window.location.search);
+        if (ctSelect && ctSelect.value) {
+          params.set('ct', ctSelect.value);
+        }
+        if (vtSelect.value) {
+          params.set('vt', vtSelect.value);
+        } else {
+          params.delete('vt');
+        }
+        window.location.search = params.toString();
       });
     }
 
     show();
   </script>
-
 </body>
-
 </html>
