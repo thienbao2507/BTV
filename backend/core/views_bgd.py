@@ -11,7 +11,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Sum, Q
 
-from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem
+from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem, BaiThi
 from .views_score import score_view  # tái dùng view chấm hiện có
 
 
@@ -55,7 +55,7 @@ def _auto_login_bgd_as_judge(request, bgd):
 
 
 # ===== Helper: tạo QR đơn (chấm điểm / đối kháng) =====
-def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None):
+def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None, vt=None):
     """
     Tạo ảnh QR + chữ bên dưới cho 1 BGD.
     kind: "score" (chấm điểm) hoặc "battle" (đối kháng).
@@ -69,13 +69,14 @@ def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None):
         )
         suffix = "Battle"
     else:
-        # QR chấm điểm: cần kèm id cuộc thi
-        if ct is None:
-            raise ValueError("Thiếu cuộc thi (ct) khi tạo QR chấm điểm.")
+        # QR chấm điểm: cần kèm id cuộc thi & id vòng thi
+        if ct is None or vt is None:
+            raise ValueError("Thiếu cuộc thi (ct) hoặc vòng thi (vt) khi tạo QR chấm điểm.")
         target_url = request.build_absolute_uri(
-            reverse("bgd-go", args=[ct.id, bgd.token])
+            reverse("bgd-go", args=[ct.id, vt.id, bgd.token])
         )
         suffix = "Score"
+
 
     # --- Tạo ảnh QR ---
     qr = qrcode.QRCode(box_size=10, border=4)
@@ -115,7 +116,7 @@ def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None):
 
 
 
-def _make_bgd_dual_qr_image(bgd, request, ct):
+def _make_bgd_dual_qr_image(bgd, request, ct, vt):
     """
     Tạo 1 ảnh chứa 2 QR:
       - trái: chấm điểm
@@ -124,8 +125,9 @@ def _make_bgd_dual_qr_image(bgd, request, ct):
     """
     from PIL import Image
 
-    left = _make_bgd_single_qr_image(bgd, request, "score", ct)
+    left = _make_bgd_single_qr_image(bgd, request, "score", ct, vt)
     right = _make_bgd_single_qr_image(bgd, request, "battle")
+
 
 
     W, H = left.size  # giả định 2 ảnh cùng size
@@ -174,11 +176,24 @@ def bgd_qr_index(request, token=None):
     if not ct:
         ct = CuocThi.objects.order_by("-id").first()
 
+    # Tìm vòng thi dùng chế độ BGD cho cuộc thi này (lấy vòng BGD mới nhất)
+    vt = None
+    if ct:
+        vt = (
+            VongThi.objects
+            .filter(cuocThi=ct, is_bgd_round=True)
+            .order_by("-id")
+            .first()
+        )
+
     # build URL đích khi quét (QR chấm điểm)
     def _go_url(tok):
-        if not ct:
+        if not ct or not vt:
             return "#"
-        return request.build_absolute_uri(reverse("bgd-go", args=[ct.id, tok]))
+        return request.build_absolute_uri(
+            reverse("bgd-go", args=[ct.id, vt.id, tok])
+        )
+
 
     for it in items:
         it["url"] = _go_url(it["token"])
@@ -203,9 +218,11 @@ def bgd_qr_index(request, token=None):
         {
             "items": items,
             "current_ct": ct,
+            "current_vt": vt,
             "competitions": competitions,
         },
     )
+
 
 
     # Ưu tiên:
@@ -227,7 +244,7 @@ def bgd_qr_index(request, token=None):
 
 
 
-def bgd_qr_png(request, ct_id: int, token: str):
+def bgd_qr_png(request, ct_id: int, vt_id: int, token: str):
     # Đảm bảo Pillow đã cài
     try:
         from PIL import Image  # noqa: F401
@@ -237,6 +254,10 @@ def bgd_qr_png(request, ct_id: int, token: str):
     ct = CuocThi.objects.filter(id=ct_id).only("id", "tenCuocThi").first()
     if not ct:
         raise Http404("Không tìm thấy cuộc thi tương ứng với mã QR này.")
+
+    vt = VongThi.objects.filter(id=vt_id, cuocThi=ct, is_bgd_round=True).only("id", "tenVongThi").first()
+    if not vt:
+        raise Http404("Không tìm thấy vòng thi BGD tương ứng với mã QR này.")
 
     bgd = (
         BanGiamDoc.objects
@@ -248,7 +269,8 @@ def bgd_qr_png(request, ct_id: int, token: str):
         raise Http404("Không tìm thấy Ban Giám Đốc tương ứng với mã QR này.")
 
     # Ảnh PNG chứa 2 QR (chấm điểm + đối kháng)
-    img = _make_bgd_dual_qr_image(bgd, request, ct)
+    img = _make_bgd_dual_qr_image(bgd, request, ct, vt)
+
 
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -278,11 +300,24 @@ def bgd_qr_zip_all(request):
             content_type="text/plain; charset=utf-8",
         )
 
+    vt = (
+        VongThi.objects
+        .filter(cuocThi=ct, is_bgd_round=True)
+        .order_by("-id")
+        .first()
+    )
+    if not vt:
+        return HttpResponse(
+            "Không tìm thấy vòng thi BGD phù hợp để sinh QR.",
+            content_type="text/plain; charset=utf-8",
+        )
+
     zip_buf = BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for bgd in bgds:
             # Mỗi file PNG trong zip cũng chứa 2 QR giống như trên trang
-            img = _make_bgd_dual_qr_image(bgd, request, ct)
+            img = _make_bgd_dual_qr_image(bgd, request, ct, vt)
+
             img_bytes = BytesIO()
             img.save(img_bytes, format="PNG")
             img_bytes.seek(0)
@@ -297,7 +332,7 @@ def bgd_qr_zip_all(request):
     return resp
 
 
-def bgd_go(request, ct_id: int, token: str):
+def bgd_go(request, ct_id: int, vt_id: int, token: str):
     bgd = BanGiamDoc.objects.filter(token=token).first()
     if not bgd:
         raise Http404("Token không hợp lệ")
@@ -308,35 +343,27 @@ def bgd_go(request, ct_id: int, token: str):
     if not ct:
         raise Http404("Cuộc thi không tồn tại.")
 
+    vt_bgd = (
+        VongThi.objects
+        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
+        .first()
+    )
+    if not vt_bgd:
+        raise Http404("Vòng thi BGD không tồn tại hoặc không thuộc cuộc thi này.")
 
-
-    if ct:
-        request.session["bgd_mode"] = "score"
-        request.session["bgd_ct_id"] = ct.id
-        request.session["bgd_ct_name"] = ct.tenCuocThi
-    else:
-        request.session.pop("bgd_mode", None)
-        request.session.pop("bgd_ct_id", None)
-        request.session.pop("bgd_ct_name", None)
-
+    # Lưu thông tin vào session để dùng cho save-score / score_bgd_view
+    request.session["bgd_mode"] = "score"
+    request.session["bgd_ct_id"] = ct.id
+    request.session["bgd_ct_name"] = ct.tenCuocThi
+    request.session["bgd_vt_id"] = vt_bgd.id
+    request.session["bgd_vt_name"] = vt_bgd.tenVongThi
     request.session["bgd_token"] = token
     request.session.modified = True
 
     contestants = []
-    vt_bgd = None
 
-    if ct:
-        vt_bgd = (
-            VongThi.objects
-            .filter(cuocThi=ct, is_bgd_round=True)
-            .order_by("-id")
-            .first()
-        )
-        print("[BGD DEBUG] Cuoc thi:", ct.id, ct.tenCuocThi)
-        if vt_bgd:
-            print("[BGD DEBUG] Vong BGD:", vt_bgd.id, vt_bgd.tenVongThi, "Top limit =", vt_bgd.bgd_top_limit)
-        else:
-            print("[BGD DEBUG] KHONG tim thay vong BGD nao cho cuoc thi nay")
+    print("[BGD DEBUG] Cuoc thi:", ct.id, ct.tenCuocThi)
+    print("[BGD DEBUG] Vong BGD:", vt_bgd.id, vt_bgd.tenVongThi, "Top limit =", vt_bgd.bgd_top_limit)
 
     if ct and vt_bgd and vt_bgd.bgd_top_limit:
         # Lấy Top X theo "Tổng" điểm của toàn bộ các vòng (trừ vòng BGD),
@@ -483,6 +510,7 @@ def bgd_save_score(request):
 
     diem_int = int(round(score_val))
 
+    # 1) Lưu vào bảng BGDScore (log riêng cho BGD)
     obj, created = BGDScore.objects.update_or_create(
         bgd=bgd,
         cuocThi=ct,
@@ -490,8 +518,84 @@ def bgd_save_score(request):
         defaults={"diem": diem_int},
     )
 
+    # 2) Đồng bộ sang PhieuChamDiem để ranking/export thấy điểm BGD
+
+    # Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
+    # fallback: vòng BGD mới nhất của cuộc thi này
+    vt = None
+    vt_id = request.session.get("bgd_vt_id")
+    if vt_id:
+        vt = VongThi.objects.filter(pk=vt_id, cuocThi=ct).first()
+    if not vt:
+        vt = (
+            VongThi.objects
+            .filter(cuocThi=ct, is_bgd_round=True)
+            .order_by("-id")
+            .first()
+        )
+
+    if not vt:
+        return JsonResponse(
+            {
+                "ok": False,
+                "created": bool(created),
+                "message": "Đã lưu điểm BGD, nhưng không tìm thấy vòng thi BGD để gắn phiếu chấm.",
+            },
+            status=400,
+        )
+
+    # Tìm giám khảo tương ứng với BGD:
+    # ưu tiên lấy từ session (judge_pk), fallback theo mã BGD
+    judge = None
+    judge_pk = request.session.get("judge_pk")
+    if judge_pk:
+        judge = GiamKhao.objects.filter(pk=judge_pk).first()
+    if not judge:
+        judge = GiamKhao.objects.filter(maNV=bgd.maBGD).first()
+
+    if not judge:
+        return JsonResponse(
+            {
+                "ok": False,
+                "created": bool(created),
+                "message": "Không tìm thấy giám khảo tương ứng với BGD để gắn phiếu chấm.",
+            },
+            status=400,
+        )
+
+    # Tạo / lấy bài thi dành riêng cho vòng BGD này
+    bt_name = f"BGD - {vt.tenVongThi}"
+    bai_bgd, _ = BaiThi.objects.get_or_create(
+        vongThi=vt,
+        tenBaiThi=bt_name,
+        defaults={
+            "cachChamDiem": 100,
+            "phuongThucCham": "POINTS",
+        },
+    )
+
+    # Tạo / cập nhật phiếu chấm để export/ranking nhìn thấy
+    phieu, phieu_created = PhieuChamDiem.objects.update_or_create(
+        thiSinh=thi_sinh,
+        giamKhao=judge,
+        cuocThi=ct,
+        vongThi=vt,
+        baiThi=bai_bgd,
+        defaults={
+            "maCuocThi": ct.ma,
+            "diem": diem_int,
+            "thoiGian": 0,
+        },
+    )
+
+
     return JsonResponse(
-        {"ok": True, "created": bool(created), "message": "Đã lưu điểm."}
+        {
+            "ok": True,
+            "created": bool(created),
+            "synced": True,
+            "message": "Đã lưu điểm và đồng bộ vào bảng chấm điểm.",
+        }
     )
 
 

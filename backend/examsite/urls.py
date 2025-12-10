@@ -61,8 +61,8 @@ urlpatterns = [
     path("bgd/", bgd_list, name="bgd-list"),                     # NEW: /bgd = danh sách
     path("bgd/qr/", bgd_qr_index, name="bgd-qr"),                # list QR
     path("bgd/qr/<str:token>/", bgd_qr_index, name="bgd-qr-one"),  # focus 1 BGD trong list
-    path("bgd/qr/<int:ct_id>/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
-    path("bgd/go/<int:ct_id>/<str:token>/", bgd_go, name="bgd-go"),
+    path("bgd/qr/<int:ct_id>/<int:vt_id>/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
+    path("bgd/go/<int:ct_id>/<int:vt_id>/<str:token>/", bgd_go, name="bgd-go"),
     path("bgd/api/save-score/", bgd_save_score, name="bgd-save-score"),
     path("bgd/battle/<str:token>/", bgd_battle_go, name="bgd-battle-go"),
     path("score/bgd/", score_bgd_view, name="score-bgd"),

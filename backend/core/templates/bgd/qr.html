@@ -117,7 +117,9 @@
   </style>
 </head>
 
-<body data-ct-id="{% if current_ct %}{{ current_ct.id }}{% endif %}">
+<body data-ct-id="{% if current_ct %}{{ current_ct.id }}{% endif %}"
+      data-vt-id="{% if current_vt %}{{ current_vt.id }}{% endif %}">
+
   <div class="wrap">
     <div class="card">
       <div class="row">
@@ -159,6 +161,7 @@
   <script>
     const items = JSON.parse(document.getElementById('bgd-items').textContent);
     const ctId = document.body.dataset.ctId || "";
+    const vtId = document.body.dataset.vtId || "";  
 
     const qrImg = document.getElementById('qrImg');
     const title = document.getElementById('title');
@@ -176,8 +179,15 @@
       }
 
       const it = items[0];
-      const base = ctId ? `/bgd/qr/${ctId}/${it.token}.png` : `/bgd/qr/${it.token}.png`;
 
+      let base = "";
+      if (ctId && vtId) {
+        base = `/bgd/qr/${ctId}/${vtId}/${it.token}.png`;
+      } else if (ctId) {
+        base = `/bgd/qr/${ctId}/${it.token}.png`;
+      } else {
+        base = `/bgd/qr/${it.token}.png`;
+      }
       qrImg.src = base;
       title.textContent = `${it.maBGD} — ${it.ten}`;
       idxEl.textContent = '';

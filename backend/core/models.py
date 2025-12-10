@@ -300,7 +300,19 @@ class PhieuChamDiem(models.Model):
         except Exception:
             is_chung_ket = False
 
-        if getattr(self.giamKhao, "role", "JUDGE") != "ADMIN" and not (is_bgd and is_chung_ket):
+        # Cho phép BGD chấm tự do ở vòng được bật chế độ BGD
+        is_bgd_round = False
+        try:
+            is_bgd_round = bool(getattr(self.vongThi, "is_bgd_round", False))
+        except Exception:
+            is_bgd_round = False
+
+        # BGD được bỏ qua phân công nếu:
+        #   - là BGD, và
+        #   - cuộc thi là "Chung Kết" hoặc vòng đó là vòng BGD
+        allow_without_assign = is_bgd and (is_chung_ket or is_bgd_round)
+
+        if getattr(self.giamKhao, "role", "JUDGE") != "ADMIN" and not allow_without_assign:
             from .models import GiamKhaoBaiThi
             allowed = GiamKhaoBaiThi.objects.filter(
                 giamKhao=self.giamKhao,
@@ -308,6 +320,7 @@ class PhieuChamDiem(models.Model):
             ).exists()
             if not allowed:
                 raise PermissionError("Giám khảo chưa được admin chỉ định cho bài thi này.")
+
 
         # (TIME/TEMPLATE sẽ được quy đổi/validate ở bước 3B)
         self.updated_at = timezone.now()
