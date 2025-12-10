@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Avg, Count
 
 from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem, BaiThi
 from .views_score import score_view  # tái dùng view chấm hiện có
@@ -483,7 +483,7 @@ def bgd_save_score(request):
             status=404,
         )
 
-    # Lấy BGD theo token đã lưu khi vào /bgd/go/<token>/
+    # 1) Lấy BGD theo token đã lưu khi vào /bgd/go/<ct>/<vt>/<token>/
     bgd_token = request.session.get("bgd_token")
     bgd = BanGiamDoc.objects.filter(token=bgd_token).first()
     if not bgd:
@@ -492,7 +492,7 @@ def bgd_save_score(request):
             status=401,
         )
 
-    # Lấy cuộc thi: ưu tiên từ session, fallback "Chung Kết"
+    # 2) Lấy cuộc thi: ưu tiên từ session, fallback "Chung Kết"
     ct = None
     ct_id = request.session.get("bgd_ct_id")
     if ct_id:
@@ -510,18 +510,16 @@ def bgd_save_score(request):
 
     diem_int = int(round(score_val))
 
-    # 1) Lưu vào bảng BGDScore (log riêng cho BGD)
-    obj, created = BGDScore.objects.update_or_create(
+    # 3) Lưu vào bảng BGDScore (mỗi BGD một dòng riêng)
+    bgd_score, created = BGDScore.objects.update_or_create(
         bgd=bgd,
         cuocThi=ct,
         thiSinh=thi_sinh,
         defaults={"diem": diem_int},
     )
 
-    # 2) Đồng bộ sang PhieuChamDiem để ranking/export thấy điểm BGD
-
-    # Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
-    # fallback: vòng BGD mới nhất của cuộc thi này
+    # 4) Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
+    #    fallback: vòng BGD mới nhất của cuộc thi này
     vt = None
     vt_id = request.session.get("bgd_vt_id")
     if vt_id:
@@ -544,26 +542,7 @@ def bgd_save_score(request):
             status=400,
         )
 
-    # Tìm giám khảo tương ứng với BGD:
-    # ưu tiên lấy từ session (judge_pk), fallback theo mã BGD
-    judge = None
-    judge_pk = request.session.get("judge_pk")
-    if judge_pk:
-        judge = GiamKhao.objects.filter(pk=judge_pk).first()
-    if not judge:
-        judge = GiamKhao.objects.filter(maNV=bgd.maBGD).first()
-
-    if not judge:
-        return JsonResponse(
-            {
-                "ok": False,
-                "created": bool(created),
-                "message": "Không tìm thấy giám khảo tương ứng với BGD để gắn phiếu chấm.",
-            },
-            status=400,
-        )
-
-    # Tạo / lấy bài thi dành riêng cho vòng BGD này
+    # 5) Tạo / lấy bài thi dành riêng cho vòng BGD này
     bt_name = f"BGD - {vt.tenVongThi}"
     bai_bgd, _ = BaiThi.objects.get_or_create(
         vongThi=vt,
@@ -574,7 +553,39 @@ def bgd_save_score(request):
         },
     )
 
-    # Tạo / cập nhật phiếu chấm để export/ranking nhìn thấy
+    # 6) Tính TRUNG BÌNH điểm tất cả BGD đã chấm cho thí sinh này trong cuộc thi này
+    agg = BGDScore.objects.filter(cuocThi=ct, thiSinh=thi_sinh).aggregate(
+        avg=Avg("diem"),
+        cnt=Count("id"),
+    )
+    avg_score = int(round(agg.get("avg") or 0))
+    bgd_count = int(agg.get("cnt") or 0)
+
+    # 7) Chọn 1 giám khảo đại diện để đứng tên phiếu điểm tổng BGD
+    #    Ưu tiên ADMIN, nếu không có thì dùng luôn judge đang login (nếu có).
+    judge = None
+    judge_pk = request.session.get("judge_pk")
+    if judge_pk:
+        judge = GiamKhao.objects.filter(pk=judge_pk).first()
+    if not judge:
+        judge = GiamKhao.objects.filter(role="ADMIN").order_by("maNV").first()
+    if not judge:
+        # fallback cuối cùng: map theo mã BGD
+        judge = GiamKhao.objects.filter(maNV=bgd.maBGD).first()
+
+    if not judge:
+        return JsonResponse(
+            {
+                "ok": False,
+                "created": bool(created),
+                "message": "Không tìm thấy giám khảo đại diện để gắn phiếu chấm BGD.",
+            },
+            status=400,
+        )
+
+    # 8) Ghi 1 phiếu chấm duy nhất cho vòng BGD này:
+    #    - Điểm = TRUNG BÌNH tất cả BGD
+    #    - thoiGian tạm để 0 (nếu sau này cần lưu số BGD có thể encode chỗ khác)
     phieu, phieu_created = PhieuChamDiem.objects.update_or_create(
         thiSinh=thi_sinh,
         giamKhao=judge,
@@ -583,18 +594,21 @@ def bgd_save_score(request):
         baiThi=bai_bgd,
         defaults={
             "maCuocThi": ct.ma,
-            "diem": diem_int,
+            "diem": avg_score,
             "thoiGian": 0,
         },
     )
-
 
     return JsonResponse(
         {
             "ok": True,
             "created": bool(created),
             "synced": True,
-            "message": "Đã lưu điểm và đồng bộ vào bảng chấm điểm.",
+            "message": "Đã lưu điểm BGD, cập nhật điểm trung bình cho phiếu chấm.",
+            "debug": {
+                "avg_score": avg_score,
+                "bgd_count": bgd_count,
+            },
         }
     )
 
