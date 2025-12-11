@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db.models import Max, SET_NULL
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Min
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
