@@ -4,6 +4,7 @@
   const columns = window.EXPORT_COLUMNS || [];
   const rows = window.EXPORT_ROWS || [];
   const FROZEN = window.FROZEN_COUNT || 3;
+  const SPECIAL_GROUPS = window.SPECIAL_GROUPS || [];
   // ==== Cột Tổng + Tổng thời gian (export thường) ====
   const TOTAL_IDX = columns.indexOf('Tổng');
   const TOTAL_TIME_IDX = columns.indexOf('Tổng thời gian');
@@ -173,30 +174,34 @@
     return Number.isFinite(f) ? f : Infinity;
   }
 
-  function compare(i, dir) {
-    return (a, b) => {
-      const va = a.r[i], vb = b.r[i];
-      const na = parseFloat(va), nb = parseFloat(vb);
-      const bothNum = Number.isFinite(na) && Number.isFinite(nb);
+function compare(i, dir) {
+  return (a, b) => {
+    const va = a.r[i], vb = b.r[i];
+    const na = parseFloat(va), nb = parseFloat(vb);
+    const bothNum = Number.isFinite(na) && Number.isFinite(nb);
 
-      // So sánh chính theo cột đang chọn (giữ hành vi cũ)
-      let primary = 0;
-      if (bothNum) {
-        primary = (na - nb) * dir;
-      } else {
-        primary = (String(va ?? '')).localeCompare(String(vb ?? ''), 'vi', { numeric: true }) * dir;
+    // === ƯU TIÊN NHÓM CHO CỘT "Tổng": Winner(2) > Loser(1) > None(0) ===
+    if (i === TOTAL_IDX) {
+      const gA = Number.isFinite(SPECIAL_GROUPS[a._i]) ? SPECIAL_GROUPS[a._i] : 0;
+      const gB = Number.isFinite(SPECIAL_GROUPS[b._i]) ? SPECIAL_GROUPS[b._i] : 0;
+      if (gA !== gB) {
+        // Luôn ép Winner > Loser > None, độc lập với dir
+        return gB - gA;
       }
-      if (primary !== 0) return primary;
+    }
 
-      // === TIE-BREAK riêng cho cột "Tổng": dùng "Tổng thời gian" ===
-      if (i === TOTAL_IDX && TOTAL_TIME_IDX !== -1) {
-        const ta = parseTimeToSec(a.r[TOTAL_TIME_IDX]);
-        const tb = parseTimeToSec(b.r[TOTAL_TIME_IDX]);
-        if (ta !== tb) {
-          // luôn ưu tiên thời gian ÍT hơn đứng trên (độc lập với dir)
-          return ta - tb;
-        }
-      }
+    // So sánh chính theo cột đang chọn (giữ hành vi cũ)
+    let primary = 0;
+    if (bothNum) primary = (na - nb) * dir;
+    else primary = (String(va ?? '')).localeCompare(String(vb ?? ''), 'vi', { numeric: true }) * dir;
+    if (primary !== 0) return primary;
+
+    // === TIE-BREAK riêng cho cột "Tổng": dùng "Tổng thời gian" ===
+    if (i === TOTAL_IDX && TOTAL_TIME_IDX !== -1) {
+      const ta = parseTimeToSec(a.r[TOTAL_TIME_IDX]);
+      const tb = parseTimeToSec(b.r[TOTAL_TIME_IDX]);
+      if (ta !== tb) return ta - tb; // thời gian ít hơn đứng trên
+    }
 
       // === TIE-BREAK cho Export thường: cột điểm -> thời gian ===
       if (isScoreCol(columns[i])) {

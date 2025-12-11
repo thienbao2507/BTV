@@ -204,11 +204,14 @@ table.export-table{
 
   {{ columns|json_script:"export-columns" }}
   {{ rows|json_script:"export-rows" }}
-  <script>
-    window.EXPORT_COLUMNS = JSON.parse(document.getElementById("export-columns").textContent || "[]");
-    window.EXPORT_ROWS    = JSON.parse(document.getElementById("export-rows").textContent || "[]");
-    window.FROZEN_COUNT   = 4;
-  </script>
+{{ special_groups|json_script:"special-groups" }}
+<script>
+  window.EXPORT_COLUMNS = JSON.parse(document.getElementById("export-columns").textContent || "[]");
+  window.EXPORT_ROWS    = JSON.parse(document.getElementById("export-rows").textContent || "[]");
+  window.SPECIAL_GROUPS = JSON.parse(document.getElementById("special-groups").textContent || "[]");  // NEW
+  window.FROZEN_COUNT   = 4;
+</script>
+
 
   <div class="excel-wrap mt-4">
     <table id="exportTable" class="export-table">
