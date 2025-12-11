@@ -18,7 +18,7 @@ RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
 COPY . /app/
 
-RUN python manage.py collectstatic --noinput
+RUN python /backend/manage.py collectstatic --noinput
 
 # Default: keep container alive until we mount code & run command from compose
 # CMD ["bash", "-lc", "sleep infinity"]
