@@ -215,3 +215,16 @@ class BGDScoreAdmin(admin.ModelAdmin):
     list_display = ("bgd", "cuocThi", "vongThi", "thiSinh", "diem", "created_at", "updated_at")
     list_filter = ("cuocThi", "bgd")
     search_fields = ("bgd__maBGD", "cuocThi__ma", "thiSinh__maNV", "thiSinh__hoTen")
+from .models import ThiSinhVoting, VotingRecord  # <-- THÊM import
+
+@admin.register(ThiSinhVoting)
+class ThiSinhVotingAdmin(admin.ModelAdmin):
+    list_display = ("thiSinh", "cuocThi", "created_at")
+    list_filter  = ("cuocThi",)
+    search_fields = ("thiSinh__maNV", "thiSinh__hoTen", "cuocThi__ma")
+
+@admin.register(VotingRecord)
+class VotingRecordAdmin(admin.ModelAdmin):
+    list_display  = ("voter_email", "thiSinh_ma", "thiSinh_ten", "cuocThi", "created_at")
+    list_filter   = ("cuocThi",)
+    search_fields = ("voter_email", "thiSinh_ma", "thiSinh_ten")

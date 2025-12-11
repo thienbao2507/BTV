@@ -1,14 +1,15 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="utf-8">
     <title>{% block title %}ExamSite{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <!-- Tailwind CDN -->
     <link rel="icon" type="image/png" href="{% static 'pics/logoFPT.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
         /* nền toàn trang, ảnh fill màn hình */
         body::before {
@@ -18,7 +19,6 @@
             background: url("{% static 'pics/bk3.jpg' %}") center/cover no-repeat fixed;
             z-index: -2;
         }
-
         /* lớp phủ mờ nhẹ để chữ dễ đọc */
         body::after {
             content: "";
@@ -27,7 +27,6 @@
             background: rgba(0, 0, 0, 0.15);
             z-index: -1;
         }
-
         /* hiệu ứng glass */
         .glass {
             background: rgba(255, 255, 255, 0.18);
@@ -51,60 +50,73 @@
                 <a href="/" class="flex items-center gap-2">
                     <img src="{% static 'pics/logoFPT.png' %}" alt="FPT Logo" class="h-7 w-auto">
                 </a>
+
                 <div class="flex items-center gap-1">
                     {% with p=request.path %}
+                    {% firstof request.session.judge_email request.session.auth_email as nav_email %}
 
-                    <!-- MENU DESKTOP (>= md): hiện đầy đủ các mục -->
+                    <!-- MENU DESKTOP (>= md) -->
                     <div class="hidden md:flex items-center gap-1">
+                        {# Chấm điểm: chỉ hiện khi có quyền judge #}
                         {% if is_logged_in %}
                         <a href="/score" class="px-3 py-2 rounded-xl hover:bg-white/10 transition
-                        {% if p|slice:':6' == '/score' %} bg-white/10 {% endif %}">Chấm điểm</a>
+                           {% if p|slice:':6' == '/score' %} bg-white/10 {% endif %}">Chấm điểm</a>
                         {% endif %}
+
+                        <a href="/voting" class="px-3 py-2 rounded-xl hover:bg-white/10 transition
+                           {% if '/voting' in p %} bg-white/10 {% endif %}">Voting</a>
 
                         <a href="/ranking" class="px-3 py-2 rounded-xl hover:bg-white/10 transition
-                        {% if '/ranking' in p %} bg-white/10 {% endif %}">Xếp hạng</a>
+                           {% if '/ranking' in p %} bg-white/10 {% endif %}">Xếp hạng</a>
 
+                        {# Quản lý: chỉ hiện khi is_admin #}
                         {% if is_admin %}
                         <a href="/management" class="px-3 py-2 rounded-xl hover:bg-white/10 transition
-                        {% if p|slice:':11' == '/management' %} bg-white/10 {% endif %}">Quản lý</a>
+                           {% if p|slice:':11' == '/management' %} bg-white/10 {% endif %}">Quản lý</a>
                         {% endif %}
 
-                        {% if is_logged_in %}
-                        <span class="ml-2 px-3 py-2 rounded-xl bg-white/10">{{ current_judge_email }}</span>
-                        <a href="/logout" class="ml-1 px-3 py-2 rounded-xl hover:bg-white/10 transition">Đăng xuất</a>
+                        {# Khu vực user (email + logout / login) #}
+                        {% if nav_email %}
+                          <span class="ml-2 px-3 py-2 rounded-xl bg-white/10 truncate max-w-[220px]" title="{{ nav_email }}">{{ nav_email }}</span>
+                          <a href="/logout" class="ml-1 px-3 py-2 rounded-xl hover:bg-white/10 transition">Đăng xuất</a>
                         {% else %}
-                        <a href="/login" class="ml-2 px-3 py-2 rounded-xl hover:bg-white/10 transition">Đăng nhập</a>
+                          <a href="/login" class="ml-2 px-3 py-2 rounded-xl hover:bg-white/10 transition">Đăng nhập</a>
                         {% endif %}
                     </div>
 
-                    <!-- MENU MOBILE (< md): chỉ hiện pill tài khoản; các mục nằm trong dropdown -->
+                    <!-- MENU MOBILE (< md) -->
                     <div class="md:hidden relative">
-                        {% if is_logged_in %}
-                        <button id="navUserBtn" type="button"
-                                class="px-3 py-2 rounded-xl bg-white/10 flex items-center gap-2">
-                            <span class="truncate max-w-[160px]">{{ current_judge_email }}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                        <div id="navDropdown"
-                            class="hidden absolute right-0 mt-2 z-[60] min-w-[9.5rem] rounded-xl shadow-xl overflow-hidden bg-slate-900/85 ring-1 ring-white/15">
-                            {% if is_logged_in %}
-                            <a href="/score" class="block px-4 py-2 hover:bg-white/10
-                            {% if p|slice:':6' == '/score' %} bg-white/10 {% endif %}">Chấm điểm</a>
-                            {% endif %}
-                            <a href="/ranking" class="block px-4 py-2 hover:bg-white/10
-                            {% if '/ranking' in p %} bg-white/10 {% endif %}">Xếp hạng</a>
-                            {% if is_admin %}
-                            <a href="/management" class="block px-4 py-2 hover:bg-white/10
-                            {% if p|slice:':11' == '/management' %} bg-white/10 {% endif %}">Quản lý</a>
-                            {% endif %}
+                        {% if nav_email %}
+                          <button id="navUserBtn" type="button"
+                                  class="px-3 py-2 rounded-xl bg-white/10 flex items-center gap-2">
+                              <span class="truncate max-w-[160px]" title="{{ nav_email }}">{{ nav_email }}</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+                              </svg>
+                          </button>
+                          <div id="navDropdown"
+                               class="hidden absolute right-0 mt-2 z-[60] min-w-[9.5rem] rounded-xl shadow-xl overflow-hidden bg-slate-900/85 ring-1 ring-white/15">
+                              {% if is_logged_in %}
+                              <a href="/score" class="block px-4 py-2 hover:bg-white/10
+                                 {% if p|slice:':6' == '/score' %} bg-white/10 {% endif %}">Chấm điểm</a>
+                              {% endif %}
 
-                            <div class="h-px bg-white/20 my-1"></div>
-                            <a href="/logout" class="block px-4 py-2 hover:bg-white/10">Đăng xuất</a>
-                        </div>
+                              <a href="/voting" class="block px-4 py-2 hover:bg-white/10
+                                 {% if '/voting' in p %} bg-white/10 {% endif %}">Voting</a>
+
+                              <a href="/ranking" class="block px-4 py-2 hover:bg-white/10
+                                 {% if '/ranking' in p %} bg-white/10 {% endif %}">Xếp hạng</a>
+
+                              {% if is_admin %}
+                              <a href="/management" class="block px-4 py-2 hover:bg-white/10
+                                 {% if p|slice:':11' == '/management' %} bg-white/10 {% endif %}">Quản lý</a>
+                              {% endif %}
+
+                              <div class="h-px bg-white/20 my-1"></div>
+                              <a href="/logout" class="block px-4 py-2 hover:bg-white/10">Đăng xuất</a>
+                          </div>
                         {% else %}
-                        <a href="/login" class="px-3 py-2 rounded-xl bg-white/10">Đăng nhập</a>
+                          <a href="/login" class="px-3 py-2 rounded-xl bg-white/10">Đăng nhập</a>
                         {% endif %}
                     </div>
                     {% endwith %}
@@ -112,7 +124,8 @@
             </div>
         </div>
     </nav>
-   {% if '/ranking' in request.path %}
+
+    {% if '/ranking' in request.path %}
     <!-- Nút toggle navbar cho trang Ranking -->
     <button id="rankingNavToggle"
             type="button"
@@ -126,21 +139,17 @@
              xmlns="http://www.w3.org/2000/svg"
              viewBox="0 0 24 24"
              class="w-5 h-5 transition-transform duration-200">
-            <!-- Mặc định: mũi tên xuống (navbar đang ẩn) -->
-            <path d="M6 9l6 6 6-6"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round" />
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
     </button>
     {% endif %}
-    <!-- CONTENT WRAPPER -->
+
+    <!-- CONTENT -->
     <main class="pt-16 pb-10">
         {% block content %}{% endblock %}
     </main>
+
     <script src="{% static 'core/navbar.js' %}?v={% now 'U' %}"></script>
 </body>
-
 </html>

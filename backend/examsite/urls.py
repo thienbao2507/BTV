@@ -42,6 +42,7 @@ from core.views_battle import battle_view, manage_battle_view, save_pairing, pai
 from core.views_export import export_page, export_xlsx, export_final_page, export_final_xlsx
 from django.conf import settings
 from django.conf.urls.static import static
+from core.views_voting import voting_home_view, voting_submit_api, voting_revoke_api
 
 urlpatterns = [
     path("", home_view, name="home"),
@@ -87,6 +88,9 @@ urlpatterns = [
     path("export-final-xlsx", export_final_xlsx, name="export-final-xlsx"),
     path("management/ranking-state", ranking_state, name="ranking-state"),
     path("upload-avatars/", upload_avatars_view, name="upload-avatars"),
-]
+    path("voting/", voting_home_view, name="voting-home"),
+    path("voting/api/revoke", voting_revoke_api, name="voting_revoke_api"),
+    path("voting/api/submit", voting_submit_api, name="voting-submit-api"),
+    ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
