@@ -30,12 +30,14 @@ from core.views_bgd import (
     bgd_qr_index,
     bgd_qr_png,
     bgd_go,
+    bgd_go_stars,
     bgd_battle_go,
     score_bgd_view,
     bgd_qr_zip_all,
     bgd_list,
     bgd_save_score,
 )
+
 from core.views_battle import battle_view, manage_battle_view, save_pairing, pairing_state, submit_vote, delete_pair
 from core.views_export import export_page, export_xlsx, export_final_page, export_final_xlsx
 from django.conf import settings
@@ -63,6 +65,12 @@ urlpatterns = [
     path("bgd/qr/<str:token>/", bgd_qr_index, name="bgd-qr-one"),  # focus 1 BGD trong list
     path("bgd/qr/<int:ct_id>/<int:vt_id>/<str:token>.png", bgd_qr_png, name="bgd-qr-png"),
     path("bgd/go/<int:ct_id>/<int:vt_id>/<str:token>/", bgd_go, name="bgd-go"),
+    path(
+    "bgd/go-stars/<int:ct_id>/<int:vt_id>/<str:token>/",
+    bgd_go_stars,
+    name="bgd-go-stars",
+),
+
     path("bgd/api/save-score/", bgd_save_score, name="bgd-save-score"),
     path("bgd/battle/<str:token>/", bgd_battle_go, name="bgd-battle-go"),
     path("score/bgd/", score_bgd_view, name="score-bgd"),

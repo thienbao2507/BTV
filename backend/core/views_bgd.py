@@ -15,6 +15,77 @@ from django.db.models import Sum, Q, Avg, Count, Max
 from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem, BaiThi
 from .views_score import score_view  # tái dùng view chấm hiện có
 
+def _select_bgd_contestants(ct, vt_bgd):
+    """
+    Chọn danh sách thí sinh cho vòng BGD hiện tại (vt_bgd) theo cấu hình Top X.
+
+    - Nếu tồn tại 1 vòng BGD trước đó trong cùng cuộc thi:
+        + Ưu tiên điểm BGD của vòng trước (Top 10, Top 20...).
+        + Tie-break 1: điểm tổng của toàn cuộc thi.
+        + Tie-break 2: tổng thời gian (ít hơn xếp trên).
+    - Nếu không có vòng BGD trước đó:
+        + Fallback: dùng tổng điểm các vòng KHÔNG phải BGD
+          (như logic cũ dùng để lấy Top 10 từ Top 50/Top 20).
+    """
+    if not (ct and vt_bgd and vt_bgd.bgd_top_limit):
+        return []
+
+    # Tìm vòng BGD liền trước (ví dụ: Top 10 trước Top 5)
+    prev_bgd_round = (
+        VongThi.objects
+        .filter(cuocThi=ct, is_bgd_round=True, id__lt=vt_bgd.id)
+        .order_by("-id")
+        .first()
+    )
+
+    if prev_bgd_round:
+        # Dựa trên điểm BGD vòng trước + tổng điểm + tổng thời gian
+        score_rows = (
+            PhieuChamDiem.objects
+            .filter(cuocThi=ct)
+            .values("thiSinh")
+            .annotate(
+                prev_bgd_score=Sum(
+                    "diem",
+                    filter=Q(vongThi=prev_bgd_round),
+                ),
+                total_diem=Sum("diem"),
+                total_time=Sum("thoiGian"),
+            )
+            .filter(prev_bgd_score__gt=0)   # chỉ lấy những người đã có điểm BGD vòng trước
+            .order_by(
+                "-prev_bgd_score",   # 1) điểm BGD vòng trước (Top 10)
+                "-total_diem",       # 2) điểm tổng
+                "total_time",        # 3) tổng thời gian (ít hơn xếp trên)
+                "thiSinh",           # 4) ổn định thứ tự
+            )[:vt_bgd.bgd_top_limit]
+        )
+    else:
+        # Không có vòng BGD trước -> dùng như cũ:
+        # lấy Top X theo tổng điểm các vòng thường, tie-break bằng thời gian
+        score_rows = (
+            PhieuChamDiem.objects
+            .filter(
+                cuocThi=ct,
+                vongThi__is_bgd_round=False,
+            )
+            .values("thiSinh")
+            .annotate(
+                total_diem=Sum("diem"),
+                total_time=Sum("thoiGian"),
+            )
+            .order_by(
+                "-total_diem",
+                "total_time",
+                "thiSinh",
+            )[:vt_bgd.bgd_top_limit]
+        )
+
+    ts_ids = [row["thiSinh"] for row in score_rows]
+    contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
+    order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
+    contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
+    return contestants
 
 def _auto_login_bgd_as_judge(request, bgd):
     """
@@ -213,6 +284,69 @@ def bgd_list(request):
         })
     return render(request, "bgd/list.html", {"bgds": out})
 
+def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
+    bgd = BanGiamDoc.objects.filter(token=token).first()
+    if not bgd:
+        raise Http404("Token không hợp lệ")
+
+    judge = _auto_login_bgd_as_judge(request, bgd)
+
+    ct = CuocThi.objects.filter(id=ct_id).first()
+    if not ct:
+        raise Http404("Cuộc thi không tồn tại.")
+
+    vt_bgd = (
+        VongThi.objects
+        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
+        .first()
+    )
+    if not vt_bgd:
+        raise Http404("Vòng thi BGD không tồn tại hoặc không thuộc cuộc thi này.")
+
+    request.session["bgd_mode"] = "stars"
+    request.session["bgd_ct_id"] = ct.id
+    request.session["bgd_ct_name"] = ct.tenCuocThi
+    request.session["bgd_vt_id"] = vt_bgd.id
+    request.session["bgd_vt_name"] = vt_bgd.tenVongThi
+    request.session["bgd_token"] = token
+    request.session.modified = True
+
+    # === LẤY DANH SÁCH THÍ SINH THEO TOP X (dựa trên Top 10, Tổng, Thời gian) ===
+    contestants = _select_bgd_contestants(ct, vt_bgd)
+
+    # Fallback: nếu chưa cấu hình vòng BGD/top_limit hoặc chưa có dữ liệu
+    if ct and not contestants:
+        contestants = (
+            ThiSinh.objects.filter(tham_gia__cuocThi=ct)
+            .annotate(
+                total_diem=Sum(
+                    "phieuchamdiem__diem",
+                    filter=Q(phieuchamdiem__cuocThi=ct),
+                )
+            )
+            .order_by("-total_diem", "maNV")
+            .distinct()[:5]
+        )
+
+    # Lấy điểm BGD đã chấm (nếu có) cho từng thí sinh
+    if ct and vt_bgd and contestants:
+        scores_qs = BGDScore.objects.filter(
+            bgd=bgd,
+            cuocThi=ct,
+            vongThi=vt_bgd,
+            thiSinh__in=contestants,
+        )
+        scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
+        for ts in contestants:
+            ts.current_bgd_score = scores_by_ts.get(ts.pk)
+
+    context = {
+        "bgd": bgd,
+        "judge": judge,
+        "ct": ct,
+        "contestants": contestants,
+    }
+    return render(request, "bgd/go_stars.html", context)
 
 def bgd_qr_index(request, token=None):
     items = list(
@@ -424,36 +558,13 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
     request.session["bgd_token"] = token
     request.session.modified = True
 
-    contestants = []
-
     print("[BGD DEBUG] Cuoc thi:", ct.id, ct.tenCuocThi)
     print("[BGD DEBUG] Vong BGD:", vt_bgd.id, vt_bgd.tenVongThi, "Top limit =", vt_bgd.bgd_top_limit)
 
-    if ct and vt_bgd and vt_bgd.bgd_top_limit:
-        # Lấy Top X theo "Tổng" điểm của toàn bộ các vòng (trừ vòng BGD),
-        # nếu bằng điểm thì so tổng thời gian (ít hơn xếp trên)
-        score_rows = (
-            PhieuChamDiem.objects
-            .filter(
-                cuocThi=ct,
-                vongThi__is_bgd_round=False,   # không tính vòng BGD
-            )
-            .values("thiSinh")
-            .annotate(
-                total_diem=Sum("diem"),
-                total_time=Sum("thoiGian"),
-            )
-            .order_by("-total_diem", "total_time", "thiSinh")[:vt_bgd.bgd_top_limit]
-        )
+    # === LẤY DANH SÁCH THÍ SINH THEO TOP X (dựa trên Top 10, Tổng, Thời gian) ===
+    contestants = _select_bgd_contestants(ct, vt_bgd)
 
-        ts_ids = [row["thiSinh"] for row in score_rows]
-        print("[BGD DEBUG] Thi sinh duoc chon theo TONG:", ts_ids)
-
-        contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
-        order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
-        contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
-
-    # Nếu chưa cấu hình vòng BGD hoặc chưa có dữ liệu -> fallback Top 5 toàn cuộc thi
+    # Nếu chưa cấu hình vòng BGD/top_limit hoặc chưa có dữ liệu -> fallback Top 5 toàn cuộc thi
     if ct and not contestants:
         contestants = (
             ThiSinh.objects.filter(tham_gia__cuocThi=ct)
@@ -475,30 +586,10 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
             vongThi=vt_bgd,
             thiSinh__in=contestants,
         )
-
         scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
-
         for ts in contestants:
             score = scores_by_ts.get(ts.pk)
             ts.current_bgd_score = score
-
-            # Quy đổi điểm (0–100) → số sao (0–5) để hiển thị cho trang go_stars
-            stars = 0
-            if isinstance(score, (int, float)) and score > 0:
-                stars = int(score // 20)
-                if stars < 0:
-                    stars = 0
-                if stars > 5:
-                    stars = 5
-            ts.current_bgd_stars = stars
-
-    # Chọn template:
-    #  - Nếu vòng này là vòng BGD Top 10 (bgd_top_limit = 10) -> dùng giao diện chấm sao.
-    #  - Các trường hợp khác (Top 5, v.v.) -> giữ nguyên trang go cũ.
-    if vt_bgd and vt_bgd.is_bgd_round and vt_bgd.bgd_top_limit == 10:
-        template_name = "bgd/go_stars.html"
-    else:
-        template_name = "bgd/go.html"
 
     context = {
         "bgd": bgd,
@@ -510,8 +601,6 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         "star_range": range(1, 6),
     }
     return render(request, template_name, context)
-
-
 
 
 def bgd_battle_go(request, token: str):
@@ -528,8 +617,6 @@ def bgd_battle_go(request, token: str):
     request.session.modified = True
 
     return redirect("battle")
-
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def bgd_save_score(request):
@@ -555,11 +642,11 @@ def bgd_save_score(request):
             status=400,
         )
 
-    if score_val < 0 or score_val > 100:
-        return JsonResponse(
-            {"ok": False, "message": "Điểm phải trong khoảng 0..100."},
-            status=400,
-        )
+    # Chỉ cho phép 0..100
+    if score_val < 0:
+        score_val = 0
+    if score_val > 100:
+        score_val = 100
 
     thi_sinh = ThiSinh.objects.filter(pk=ts_id).first()
     if not thi_sinh:
@@ -568,7 +655,7 @@ def bgd_save_score(request):
             status=404,
         )
 
-    # 1) Lấy BGD theo token đã lưu khi vào /bgd/go/<ct>/<vt>/<token>/
+    # Lấy BGD từ session
     bgd_token = request.session.get("bgd_token")
     bgd = BanGiamDoc.objects.filter(token=bgd_token).first()
     if not bgd:
@@ -577,7 +664,10 @@ def bgd_save_score(request):
             status=401,
         )
 
-    # 2) Lấy cuộc thi: ưu tiên từ session, fallback "Chung Kết"
+    # Xác định mode: "score" (go) hay "stars" (go_stars)
+    mode = request.session.get("bgd_mode") or "score"
+
+    # Lấy cuộc thi
     ct = None
     ct_id = request.session.get("bgd_ct_id")
     if ct_id:
@@ -593,8 +683,7 @@ def bgd_save_score(request):
             status=400,
         )
 
-    # 3) Lấy vòng thi BGD: ưu tiên từ session (đã set khi vào bgd_go),
-    #    fallback: vòng BGD mới nhất của cuộc thi này
+    # Lấy vòng thi BGD
     vt = None
     vt_id = request.session.get("bgd_vt_id")
     if vt_id:
@@ -606,7 +695,6 @@ def bgd_save_score(request):
             .order_by("-id")
             .first()
         )
-
     if not vt:
         return JsonResponse(
             {
@@ -617,9 +705,24 @@ def bgd_save_score(request):
             status=400,
         )
 
-    diem_int = int(round(score_val))
+    # --- 1) Chuẩn hoá điểm theo mode ---
+    if mode == "stars":
+        # Map 1–5 sao => 20–100 (nấc 20 điểm)
+        # Nếu 0 điểm thì cho về 0 (chưa chấm)
+        if score_val <= 0:
+            diem_int = 0
+        else:
+            star = int(round(score_val / 20.0))  # 0..5
+            if star < 1:
+                star = 1
+            if star > 5:
+                star = 5
+            diem_int = star * 20                 # 20,40,60,80,100
+    else:
+        # mode "score": giữ nguyên 0..100 (chấm slider)
+        diem_int = int(round(score_val))
 
-    # 4) Lưu vào bảng BGDScore (mỗi BGD một dòng riêng theo VÒNG THI)
+    # --- 2) Lưu điểm thô của từng BGD vào BGDScore ---
     bgd_score, created = BGDScore.objects.update_or_create(
         bgd=bgd,
         cuocThi=ct,
@@ -628,8 +731,7 @@ def bgd_save_score(request):
         defaults={"diem": diem_int},
     )
 
-
-    # 5) Tạo / lấy bài thi dành riêng cho vòng BGD này
+    # Tạo / lấy bài thi tương ứng vòng BGD
     bt_name = f"BGD - {vt.tenVongThi}"
     bai_bgd, _ = BaiThi.objects.get_or_create(
         vongThi=vt,
@@ -640,33 +742,29 @@ def bgd_save_score(request):
         },
     )
 
-    # 6) Tính TRUNG BÌNH điểm tất cả BGD đã chấm cho thí sinh này
-    #    trong VÒNG BGD hiện tại của cuộc thi này.
-    #    Mỗi BGD chỉ còn 1 dòng (điểm mới nhất) trong BGDScore
+    # --- 3) DÙNG CHUNG CHO CẢ 2 MODE: tính ĐIỂM TRUNG BÌNH mọi BGD, lưu 1 phiếu duy nhất ---
+
+    # Lấy toàn bộ điểm của các BGD đã chấm cho thí sinh này
     qs = BGDScore.objects.filter(cuocThi=ct, vongThi=vt, thiSinh=thi_sinh)
 
     agg = qs.aggregate(
         avg=Avg("diem"),
         cnt=Count("bgd", distinct=True),
     )
-    avg_score = int(round(agg.get("avg") or 0))
+    avg_val = agg.get("avg") or 0
     bgd_count = int(agg.get("cnt") or 0)
 
+    # Cho phép lưu số thực (ví dụ 78.5) nếu model dùng Float/DecimalField
+    avg_score = float(avg_val)
 
+    # Chọn 1 giám khảo ĐẠI DIỆN CỐ ĐỊNH cho vòng BGD,
+    # đúng yêu cầu: lấy ADMIN nếu có, giống cách làm Top 10.
+    rep_judge = GiamKhao.objects.filter(role="ADMIN").order_by("maNV").first()
+    if not rep_judge:
+        # fallback: 1 giám khảo bất kỳ, nhưng cố định (mã nhỏ nhất)
+        rep_judge = GiamKhao.objects.order_by("maNV").first()
 
-    # 7) Chọn 1 giám khảo đại diện để đứng tên phiếu điểm tổng BGD
-    #    Ưu tiên ADMIN, nếu không có thì dùng luôn judge đang login (nếu có).
-    judge = None
-    judge_pk = request.session.get("judge_pk")
-    if judge_pk:
-        judge = GiamKhao.objects.filter(pk=judge_pk).first()
-    if not judge:
-        judge = GiamKhao.objects.filter(role="ADMIN").order_by("maNV").first()
-    if not judge:
-        # fallback cuối cùng: map theo mã BGD
-        judge = GiamKhao.objects.filter(maNV=bgd.maBGD).first()
-
-    if not judge:
+    if not rep_judge:
         return JsonResponse(
             {
                 "ok": False,
@@ -676,12 +774,19 @@ def bgd_save_score(request):
             status=400,
         )
 
-    # 8) Ghi 1 phiếu chấm duy nhất cho vòng BGD này:
-    #    - Điểm = TRUNG BÌNH tất cả BGD
-    #    - thoiGian tạm để 0 (nếu sau này cần lưu số BGD có thể encode chỗ khác)
+    # Đảm bảo chỉ còn 1 phiếu đại diện:
+    # xoá các phiếu BGD cũ khác rep_judge cho thí sinh/vòng này
+    PhieuChamDiem.objects.filter(
+        thiSinh=thi_sinh,
+        cuocThi=ct,
+        vongThi=vt,
+        baiThi=bai_bgd,
+    ).exclude(giamKhao=rep_judge).delete()
+
+    # Tạo/ cập nhật phiếu chấm đại diện với điểm = TRUNG BÌNH từ BGDScore
     phieu, phieu_created = PhieuChamDiem.objects.update_or_create(
         thiSinh=thi_sinh,
-        giamKhao=judge,
+        giamKhao=rep_judge,
         cuocThi=ct,
         vongThi=vt,
         baiThi=bai_bgd,
@@ -696,15 +801,16 @@ def bgd_save_score(request):
         {
             "ok": True,
             "created": bool(created),
-            "synced": True,
+            "mode": mode,
             "message": "Đã lưu điểm BGD, cập nhật điểm trung bình cho phiếu chấm.",
             "debug": {
+                "last_bgd_score": diem_int,
                 "avg_score": avg_score,
                 "bgd_count": bgd_count,
+                "phieu_created": phieu_created,
             },
         }
     )
-
 
 # --- 4) View chấm cho BGD: khóa vào "Chung Kết", tái dùng score_view ---
 def score_bgd_view(request):

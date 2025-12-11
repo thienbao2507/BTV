@@ -266,7 +266,7 @@ class PhieuChamDiem(models.Model):
     maCuocThi = models.CharField(max_length=10, db_index=True, editable=False)  # NEW
     vongThi = models.ForeignKey(VongThi, on_delete=models.CASCADE)
     baiThi = models.ForeignKey(BaiThi, on_delete=models.CASCADE)
-    diem = models.IntegerField(validators=[MinValueValidator(0)])
+    diem = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     thoiGian = models.PositiveIntegerField(default = 0, help_text="Thời gian (giây)")
     updated_at = models.DateTimeField(default=timezone.now)
 

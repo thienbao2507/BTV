@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
         if (!slider) return;
 
-        // từ ô số -> slider
         input.addEventListener("input", function () {
             let val = parseFloat(input.value);
             if (isNaN(val)) val = 0;
@@ -21,76 +20,53 @@ document.addEventListener("DOMContentLoaded", function () {
             slider.value = val;
         });
 
-        // từ slider -> ô số
         slider.addEventListener("input", function () {
             input.value = slider.value;
         });
     });
     
 
-    // ================== CHẤM SAO (1–5★) ==================
-    const STAR_MIN = 1;
-    const STAR_MAX = 5;
+    // --- Chấm điểm bằng sao: 1–5 sao, mỗi sao = 20 điểm ---
+    const starGroups = document.querySelectorAll('[data-role="star-group"]');
 
-    function setStarsForIndex(index, stars) {
-        console.log("[BGD] setStarsForIndex", { index, stars });
-        // Cập nhật màu / trạng thái cho toàn bộ nút sao của thí sinh ts-index = index
-        const buttons = document.querySelectorAll(
-            'button[data-role="star-btn"][data-ts-index="' + index + '"]'
+    starGroups.forEach(function (group) {
+        const idx = group.getAttribute("data-ts-index");
+        const stars = group.querySelectorAll('[data-role="star"]');
+        const input = document.querySelector(
+            'input[data-role="score-input"][data-ts-index="' + idx + '"]'
         );
+        if (!input) return;
 
-        const hiddenInput = document.querySelector(
-            'input[data-role="star-value"][data-ts-index="' + index + '"]'
-        );
+        function syncStarsFromScore() {
+            let val = parseFloat(input.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 100) val = 100;
+            const starCount = Math.round(val / 20); // 0..5
 
-        if (hiddenInput) {
-            hiddenInput.value = stars;
-            console.log("[BGD]  hiddenInput value set =", hiddenInput.value);
+            stars.forEach(function (star, i) {
+                if (i < starCount) {
+                    star.classList.add("bgd-star-on");
+                } else {
+                    star.classList.remove("bgd-star-on");
+                }
+            });
         }
 
-        // Nếu bạn đang dùng icon ảnh + class .active như battle/index.html
-        buttons.forEach(function (btn) {
-            const btnStar = parseInt(btn.getAttribute("data-star")) || 0;
-            if (btnStar <= stars && stars > 0) {
-                btn.classList.add("active");
-            } else {
-                btn.classList.remove("active");
-            }
-        });
-    }
-
-    const starButtons = document.querySelectorAll('button[data-role="star-btn"]');
-    starButtons.forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            const index = btn.getAttribute("data-ts-index");
-            const starVal = parseInt(btn.getAttribute("data-star")) || 0;
-
-            const hiddenInput = document.querySelector(
-                'input[data-role="star-value"][data-ts-index="' + index + '"]'
-            );
-            const current = hiddenInput ? parseInt(hiddenInput.value) || 0 : 0;
-
-            // Bấm lại đúng ngôi sao đang chọn -> về 0 sao (bỏ chấm)
-            let newStars = starVal;
-            if (current === starVal) {
-                newStars = 0;
-            }
-
-            console.log("[BGD] click star", {
-                index,
-                starVal,
-                current,
-                newStars,
+        stars.forEach(function (star, index) {
+            star.addEventListener("click", function () {
+                const starCount = index + 1;     // 1..5
+                const score = starCount * 20;    // 20,40,..100
+                input.value = String(score);
+                syncStarsFromScore();
             });
-
-            if (newStars < 0) newStars = 0;
-            if (newStars > STAR_MAX) newStars = STAR_MAX;
-
-            setStarsForIndex(index, newStars);
         });
+
+        // Khởi tạo trạng thái sao theo điểm hiện có (nếu có)
+        syncStarsFromScore();
     });
 
-    // ================== CAROUSEL ==================
+
+    // --- Carousel: vuốt 1 lần qua 1 thí sinh + dots ---
     const track = document.querySelector('[data-role="carousel-track"]');
     const slides = track ? Array.from(track.querySelectorAll('[data-slide-index]')) : [];
     const dots = Array.from(document.querySelectorAll('[data-role="carousel-dot"]'));
