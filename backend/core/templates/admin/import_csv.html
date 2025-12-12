@@ -22,9 +22,22 @@
       <option value="">-- chọn --</option>
       <option value="thisinh">Thí sinh</option>
       <option value="giamkhao">Giám khảo</option>
+      <option value="voting">Thí sinh (vòng Voting)</option>
     </select>
   </div>
 
+<div class="form-row" style="margin-top: .5rem">
+  <label>Cuộc thi (để gán danh sách voting / tham gia):</label>
+  <select name="maCT">
+    <option value="">-- không chọn --</option>
+    {% for ct in cuocthi_list %}
+    <option value="{{ ct.ma }}"
+      {% if preselected_ma and preselected_ma == ct.ma %}selected{% endif %}>
+      {{ ct.ma }} — {{ ct.tenCuocThi }}
+    </option>
+    {% endfor %}
+  </select>
+</div>
   <div class="form-row" style="margin-top: .5rem">
     <label>File (CSV hoặc XLSX):</label>
     <input type="file" name="file" accept=".csv,.xlsx" required />

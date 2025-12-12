@@ -14,6 +14,22 @@
 
       <form class="mt-6 space-y-5" method="post" enctype="multipart/form-data">
         {% csrf_token %}
+
+        <!-- Bộ lọc áp dụng trước khi cập nhật -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm mb-1">Cuộc thi (tùy chọn)</label>
+            <select name="maCT"
+                    class="w-full rounded-xl bg-white/90 text-slate-800 border border-white/50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-300">
+              <option value="">-- tất cả cuộc thi --</option>
+              {% for ct in cuocthi_list %}
+              <option value="{{ ct.ma }}">{{ ct.ma }} - {{ ct.tenCuocThi }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Chọn ảnh -->
         <div>
           <label class="block text-sm mb-2">Ảnh thí sinh</label>
           <input id="images-input" type="file" name="images" multiple
@@ -67,6 +83,7 @@
     <h2 class="font-semibold">Ghi chú</h2>
     <ul class="mt-2 list-disc pl-5 text-white/80 text-sm space-y-1">
       <li>Tên file phải sử dụng mã nhân viên, ví dụ: <code>00353288.jpg</code>, <code>00363588.png</code>.</li>
+      <li>Nếu bật “Chỉ cập nhật thí sinh trong Voting”, ảnh của mã không thuộc danh sách Voting sẽ bị bỏ qua.</li>
       <li>Nếu mã không tồn tại trong bảng thí sinh, hệ thống sẽ báo ở phần cảnh báo.</li>
       <li>Nếu upload lại cùng mã, ảnh cũ sẽ được thay bằng ảnh mới.</li>
     </ul>

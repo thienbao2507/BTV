@@ -988,88 +988,62 @@ def score_template_api(request, btid: int):
         "message": f"Đã lưu {total} điểm cho {bt.ma} (TEMPLATE).",
     })
     
+# views_score.py
 def _apply_special_round_bonus_if_ready(bt, thi_sinh, judge, raw_total, raw_time):
     """
-    Logic vòng đặc biệt (phiên bản mới – không phụ thuộc cùng giám khảo):
-
-    - Chỉ chạy nếu vongThi.is_special_bonus_round == True
-    - Tìm cặp SpecialRoundPairMember của thí sinh trong vòng đó
-    - Ghi log điểm raw vào SpecialRoundScoreLog (1 thí sinh, 1 bài, 1 GK)
-    - Gom toàn bộ log của CẶP đó (mọi giám khảo) bằng compute_special_round_pair_result:
-        + avg(raw_score) + tie-break theo thời gian (raw_time)
-        + trả về dict {thiSinh_id: 100 hoặc 0}
-    - Áp dụng:
-        + winner  -> special_bonus_score (mặc định 100)
-        + loser   -> 0
-      cho TẤT CẢ Phiếu chấm (PhieuChamDiem) của 2 thí sinh trong cặp ở bài đó.
+    Vòng đặc biệt (pair):
+    - Chỉ chạy nếu vongThi.is_special_bonus_round == True.
+    - Ghi log (SpecialRoundScoreLog) mỗi lần chấm.
+    - Tổng hợp cả CẶP bằng compute_special_round_pair_result(...) để biết winner/loser.
+    - ÁP DỤNG MỚI:
+        * Winner: GIỮ NGUYÊN điểm raw đã chấm (KHÔNG đè = 100).
+        * Loser : set = 0 cho mọi phiếu của bài đó trong cặp.
     """
-
     vt = getattr(bt, "vongThi", None)
     if not vt or not getattr(vt, "is_special_bonus_round", False):
-        return  # không phải vòng đặc biệt
+        return
 
     ct = getattr(vt, "cuocThi", None)
     if not ct or not thi_sinh:
         return
 
-    # Điểm thưởng cho người thắng (mặc định 100)
-    bonus = int(getattr(vt, "special_bonus_score", 100) or 100)
-
-    # 1. Lấy member của thí sinh trong cặp đặc biệt
-    try:
-        member = SpecialRoundPairMember.objects.select_related("pair", "thiSinh").get(
-            pair__cuocThi=ct,
-            pair__vongThi=vt,
-            thiSinh=thi_sinh,
-        )
-    except SpecialRoundPairMember.DoesNotExist:
-        # Thí sinh này không nằm trong cặp đặc biệt (top 20) → bỏ qua
+    # 2) Lấy cặp của thí sinh này trong vòng hiện tại (lấy trước để có pair_member)
+    pair_member = SpecialRoundPairMember.objects.filter(
+        pair__vongThi=vt, pair__cuocThi=ct, thiSinh=thi_sinh
+    ).select_related("pair").first()
+    if not pair_member:
         return
 
-    special_pair = member.pair
-
-    # 2. Ghi / cập nhật log điểm raw cho thí sinh này & giám khảo này
-    #    (1 dòng / thí sinh / giám khảo / bài thi trong vòng đặc biệt)
+    # 1) Ghi lại log raw (điểm + thời gian) cho lần chấm này
     SpecialRoundScoreLog.objects.update_or_create(
         cuocThi=ct,
         vongThi=vt,
         baiThi=bt,
-        pair_member=member,
+        pair_member=pair_member,
         giamKhao=judge,
-        defaults={
-            "raw_score": float(raw_total or 0),
-            "raw_time": int(raw_time or 0),
-        },
+        defaults=dict(raw_score=raw_total, raw_time=raw_time),
     )
 
-    # 3. Tính kết quả cho cả CẶP, BỎ QUA giám khảo
-    result_map = compute_special_round_pair_result(
-        cuocThi=ct,
-        vongThi=vt,
-        baiThi=bt,
-        special_pair=special_pair,
-    )
 
-    # Nếu chưa đủ 2 bên có log -> chưa xử lý
-    if not result_map:
+    result_map = compute_special_round_pair_result(ct, vt, bt, pair_member.pair)
+
+    # CHỐT: chưa đủ dữ liệu để kết luận thì KHÔNG set 0 cho ai cả
+    if not result_map or len(result_map) < 2:
         return
 
-    # 4. Áp dụng kết quả 100/0 (hoặc special_bonus_score/0) vào PhieuChamDiem
-    #    cho tất cả phiếu của 2 thí sinh trong bài này
-    for ts_id, val in result_map.items():
-        if ts_id is None:
+    members = SpecialRoundPairMember.objects.filter(pair=pair_member.pair).values_list("thiSinh_id", flat=True)
+    for ts_id in members:
+        is_winner = (result_map.get(ts_id, 0) == 100)
+
+
+        # Tập phiếu của thí sinh ts_id trong BÀI hiện tại
+        qs = PhieuChamDiem.objects.filter(
+            cuocThi=ct, vongThi=vt, baiThi=bt, thiSinh_id=ts_id
+        )
+
+        if is_winner:
+            # KHÔNG can thiệp: để nguyên điểm raw đã chấm
             continue
-
-        # compute_special_round_pair_result trả 0 hoặc 100.
-        # Nếu bạn đổi special_bonus_score != 100 thì map lại ở đây:
-        if val == 100:
-            final_score = bonus
         else:
-            final_score = 0
-
-        PhieuChamDiem.objects.filter(
-            cuocThi=ct,
-            vongThi=vt,
-            baiThi=bt,
-            thiSinh_id=ts_id,
-        ).update(diem=final_score)
+            # Loser => 0 điểm
+            qs.update(diem=0)

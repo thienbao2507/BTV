@@ -3,7 +3,7 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>QR Ban Giám Đốc</title>
+  <title>QR Ban Giám Khảo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
@@ -148,14 +148,14 @@
           </div>
           <div class="round-label" id="roundLabel">
             {% if current_vt %}
-              Giám Đốc: {{ items.0.ten }} — {{ current_vt.tenVongThi }}
+              Giám Khảo: {{ items.0.ten }} — {{ current_vt.tenVongThi }}
             {% else %}
               Không có vòng thi BGD được chọn
             {% endif %}
           </div>
         </div>
         <div class="meta">
-          <h2 id="title">QR Ban Giám Đốc</h2>
+          <h2 id="title">QR Ban Giám Khảo</h2>
           <div class="muted" id="sub">
             {% if current_ct %}
               {{ current_ct.tenCuocThi }}

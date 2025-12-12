@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db.models import Max, SET_NULL
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Min
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -707,3 +707,45 @@ def sync_phieu_cham_from_bgdscore(sender, instance, **kwargs):
         phieu.diem = avg_score
         phieu.updated_at = now
         phieu.save(update_fields=["diem", "updated_at"])
+# --- VOTING MODELS ---
+
+class ThiSinhVoting(models.Model):
+    """
+    Danh sách thí sinh tham gia vòng voting (theo từng cuộc thi).
+    """
+    thiSinh = models.ForeignKey('ThiSinh', on_delete=models.CASCADE, related_name='in_voting')
+    cuocThi = models.ForeignKey('CuocThi', on_delete=models.CASCADE, related_name='voting_candidates')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('thiSinh', 'cuocThi')
+        indexes = [
+            models.Index(fields=['cuocThi']),
+            models.Index(fields=['thiSinh', 'cuocThi']),
+        ]
+
+    def __str__(self):
+        return f"{self.thiSinh_id} in {self.cuocThi.ma}"
+
+
+class VotingRecord(models.Model):
+    """
+    Lưu 1 phiếu vote duy nhất cho mỗi email.
+    - Mỗi email chỉ được vote đúng 1 người (toàn hệ thống).
+    - Ghi đè tên + mã NV của thí sinh để tiện báo cáo.
+    """
+    voter_email = models.EmailField(unique=True, db_index=True)
+    cuocThi = models.ForeignKey('CuocThi', on_delete=models.SET_NULL, null=True, blank=True)
+    thiSinh = models.ForeignKey('ThiSinh', on_delete=models.CASCADE)
+    thiSinh_ma = models.CharField(max_length=20, db_index=True)
+    thiSinh_ten = models.CharField(max_length=255)
+    count = models.PositiveSmallIntegerField(default=1)  # luôn = 1
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['thiSinh_ma']),
+        ]
+
+    def __str__(self):
+        return f"{self.voter_email} -> {self.thiSinh_ma}"
