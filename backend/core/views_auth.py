@@ -15,7 +15,7 @@ def login_view(request):
                 "auth/login.html",
                 {
                     "next": next_url,
-                    "error": "Email của bạn không thuộc domain được phép. Vui lòng dùng email công ty (ví dụ: @fpt.com, @fpt.net, @vienthong.com).",
+                    "error": "Email của bạn không thuộc domain được phép. Vui lòng dùng email công ty (ví dụ: @fpt.com, @fpt.net, @vienthongtin.com).",
                     "email": email,  # prefill lại cho tiện sửa
                 },
                 status=400,
