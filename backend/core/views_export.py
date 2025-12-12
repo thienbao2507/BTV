@@ -5,7 +5,7 @@ from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg, Max
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side  # <- thêm Border, Side
 from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
-
+from .models import SpecialRoundPairMember
 
 # --- helpers cho thời gian ---
 def _pick_time_value(obj):
@@ -93,11 +93,10 @@ def _flatten(ct: CuocThi):
     # Info columns bạn đang dùng
     info_titles = ['Đơn vị', 'Chi nhánh', 'Vùng', 'Nhóm', 'Email']
 
-    # Xây tiêu đề tổng cộng: 3 cột info cơ bản + 5 info + (cặp Điểm/Thời gian)* + Tổng + Tổng thời gian
+    # Header đầy đủ
     columns = ['STT', 'Mã NV', 'Họ tên'] + info_titles + titles_per_exam + ['Tổng', 'Tổng thời gian']
 
-
-    # Map điểm trung bình theo (maNV, baiThi_id)
+    # ==== Map điểm trung bình theo (maNV, baiThi_id)
     score_qs = (
         PhieuChamDiem.objects
         .filter(cuocThi=ct)
@@ -106,9 +105,9 @@ def _flatten(ct: CuocThi):
     )
     score_map = {(r["thiSinh__maNV"], r["baiThi_id"]): (float(r["avg"]) if r["avg"] is not None else "") for r in score_qs}
 
-    # Lấy tất cả phiếu để tự bóc thời gian (vì tên field thời gian có thể khác nhau)
+    # ==== Map thời gian ưu tiên MIN theo (maNV, baiThi_id)
     all_phieu = list(PhieuChamDiem.objects.filter(cuocThi=ct).select_related("thiSinh", "baiThi"))
-    time_map = {}  # (maNV, baiThi_id) -> một giá trị thời gian (ưu tiên nhỏ nhất nếu có nhiều lần)
+    time_map = {}
     for p in all_phieu:
         key = (getattr(p.thiSinh, "maNV", None), getattr(p.baiThi, "id", None))
         if key[0] is None or key[1] is None:
@@ -116,7 +115,6 @@ def _flatten(ct: CuocThi):
         t = _pick_time_value(p)  # giây hoặc None
         if t is None:
             continue
-        # nếu có nhiều bản ghi: lấy MIN (thường là tốt nhất), bạn có thể đổi sang MAX hay AVG tùy nghiệp vụ
         cur = time_map.get(key)
         if (cur is None) or (t < cur):
             time_map[key] = t
@@ -124,12 +122,37 @@ def _flatten(ct: CuocThi):
     ts_qs = ThiSinh.objects.filter(cuocThi=ct).order_by("maNV").distinct()
     def _sv(x): return "" if x is None else str(x)
 
-    # Gom dữ liệu để sort theo Tổng điểm (giảm dần) + Tổng thời gian (tăng dần)
+    # ==== TẬP vòng/bài/thi-sinh thuộc vòng đặc biệt ====
+    # 1) Ưu tiên cờ is_special_bonus_round; nếu không có, fallback theo các cặp tồn tại
+    vt_special_ids = list(
+        VongThi.objects.filter(cuocThi=ct, is_special_bonus_round=True).values_list("id", flat=True)
+    )
+    if not vt_special_ids:
+        vt_special_ids = list(
+            SpecialRoundPairMember.objects
+            .filter(pair__vongThi__cuocThi=ct)
+            .values_list("pair__vongThi_id", flat=True)
+            .distinct()
+        )
+
+    bt_special_ids = set(
+        BaiThi.objects.filter(vongThi_id__in=vt_special_ids).values_list("id", flat=True)
+    )
+
+    special_members_ma = set(
+        SpecialRoundPairMember.objects
+        .filter(pair__vongThi_id__in=vt_special_ids)
+        .values_list("thiSinh__maNV", flat=True)
+        .distinct()
+    )
+
+    # ==== Gom dữ liệu từng thí sinh ====
     data = []
+    bt_ids_in_order = [c["id"] for c in cols_meta if c.get("kind") == "score"]
 
     for ts in ts_qs:
         row = [
-            None,  # STT sẽ gán sau khi sort
+            None,  # STT, sẽ gán sau
             _sv(getattr(ts, "maNV", "")),
             _sv(getattr(ts, "hoTen", "")),
             _sv(getattr(ts, "donVi", "")),
@@ -143,57 +166,70 @@ def _flatten(ct: CuocThi):
         total_time_sec = 0
         has_any_time = False
 
-        # chỉ lấy mỗi bài thi 1 lần (theo các cột 'score')
-        bt_ids_in_order = [c["id"] for c in cols_meta if c.get("kind") == "score"]
-
+        # Vừa build row, vừa tính tổng
         for bt_id in bt_ids_in_order:
-            # 1) điểm
             sc = score_map.get((ts.maNV, bt_id), "")
             row.append(sc)
             if isinstance(sc, (int, float)):
                 total_score += float(sc)
 
-            # 2) thời gian (mm:ss) – để trống nếu không có
             tm_seconds = time_map.get((ts.maNV, bt_id))
             row.append(_fmt_mmss(tm_seconds))
             if tm_seconds is not None:
                 has_any_time = True
                 total_time_sec += tm_seconds
 
-        # Cột Tổng điểm
+        # Cột Tổng
         row.append(total_score)
-        # Cột Tổng thời gian (mm:ss) – nếu không có thời gian nào thì để trống
+        # Cột Tổng thời gian
         row.append(_fmt_mmss(total_time_sec) if has_any_time else "")
+
+        # ==== Tính tổng điểm ở các bài "vòng đặc biệt" để suy ra group ====
+        sp_total = 0.0
+        if ts.maNV in special_members_ma and bt_special_ids:
+            for bt_id in bt_special_ids:
+                sc_sp = score_map.get((ts.maNV, bt_id), "")
+                if isinstance(sc_sp, (int, float)):
+                    sp_total += float(sc_sp)
+
+        if ts.maNV in special_members_ma:
+            # Winner nếu có điểm > 0 ở vòng đặc biệt (vì loser đã bị set = 0 ở views_score.py)
+            special_group = 2 if sp_total > 0 else 1
+        else:
+            special_group = 0
 
         data.append({
             "ts": ts,
             "row": row,
             "total_score": float(total_score),
-            "total_time_sec": total_time_sec if has_any_time else None,
+            "total_time_sec": (total_time_sec if has_any_time else None),
+            "__special_group": special_group,
         })
 
-    # Sort:
-    # 1) Tổng điểm: giảm dần
-    # 2) Nếu bằng Tổng điểm -> Tổng thời gian: tăng dần (ít thời gian hơn xếp trên)
-    # 3) Cuối cùng sort theo Mã NV cho ổn định
+    # ==== Sort theo NHÓM → TỔNG → THỜI GIAN → MÃ NV ====
     def _time_key(seconds):
         return seconds if seconds is not None else float("inf")
 
     data.sort(
         key=lambda d: (
-            -d["total_score"],
-            _time_key(d["total_time_sec"]),
-            _sv(getattr(d["ts"], "maNV", "")),
+            -int(d.get("__special_group", 0)),                 # Winner(2) > Loser(1) > None(0)
+            -float(d["total_score"]),                          # Tổng điểm giảm dần
+            _time_key(d["total_time_sec"]),                    # Tổng thời gian tăng dần
+            _sv(getattr(d["ts"], "maNV", "")),                 # ổn định
         )
     )
 
-    # Gán lại STT theo thứ tự sau khi sort
+    # Gán STT + build special_groups cùng thứ tự rows
     rows = []
+    special_groups = []
     for idx, item in enumerate(data, start=1):
         item["row"][0] = idx
         rows.append(item["row"])
+        special_groups.append(int(item.get("__special_group", 0)))
 
-    return columns, rows
+    # Trả thêm special_groups để front-end có thể ưu tiên nhóm khi sort cột "Tổng"
+    return columns, rows, special_groups
+
 
 
 
@@ -221,10 +257,10 @@ def export_xlsx(request):
             kinds = payload.get("col_kinds") or ["info"] * len(columns)
         except Exception:
             # fallback sang full nếu payload lỗi
-            columns, rows = _flatten(ct)
+            columns, rows, _special_groups = _flatten(ct)
             kinds = ["info"] * len(columns)
     else:
-        columns, rows = _flatten(ct)
+        columns, rows, _special_groups = _flatten(ct)
 
         info_count = 3 + 5
         kinds = ["info"] * len(columns)
@@ -340,12 +376,13 @@ def export_page(request):
     # Chỉ lấy các cuộc thi đang bật
     active_cts = CuocThi.objects.filter(trangThai=True).order_by("ma", "tenCuocThi")
 
-    columns, rows = _flatten(ct)
+    columns, rows, special_groups = _flatten(ct)
     return render(request, "export/index.html", {
         "contest": ct,
         "columns": columns,
         "rows": rows,
-        "active_cts": active_cts,   # <-- thêm vào context
+        "special_groups": special_groups,   # NEW
+        "active_cts": active_cts,
     })
 # --- FINAL EXPORT (Chung Kết) ---
 from django.db.models import Avg, Sum

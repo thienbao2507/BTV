@@ -11,9 +11,18 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Sum, Q, Avg, Count, Max
 
-
-from .models import BanGiamDoc, CuocThi, GiamKhao, ThiSinh, BGDScore, VongThi, PhieuChamDiem, BaiThi
+from .models import (
+    BanGiamDoc,
+    CuocThi,
+    GiamKhao,
+    ThiSinh,
+    BGDScore,
+    VongThi,
+    PhieuChamDiem,
+    BaiThi,
+)
 from .views_score import score_view  # tái dùng view chấm hiện có
+
 
 def _select_bgd_contestants(ct, vt_bgd):
     """
@@ -32,60 +41,79 @@ def _select_bgd_contestants(ct, vt_bgd):
 
     # Tìm vòng BGD liền trước (ví dụ: Top 10 trước Top 5)
     prev_bgd_round = (
-        VongThi.objects
-        .filter(cuocThi=ct, is_bgd_round=True, id__lt=vt_bgd.id)
+        VongThi.objects.filter(cuocThi=ct, is_bgd_round=True, id__lt=vt_bgd.id)
         .order_by("-id")
         .first()
     )
 
+    # Tìm vòng đặc biệt gần nhất trước vòng BGD hiện tại
+    prev_special_round = (
+        VongThi.objects.filter(cuocThi=ct, is_special_bonus_round=True, id__lt=vt_bgd.id)
+        .order_by("-id")
+        .first()
+    )
+
+
     if prev_bgd_round:
         # Dựa trên điểm BGD vòng trước + tổng điểm + tổng thời gian
-        score_rows = (
-            PhieuChamDiem.objects
-            .filter(cuocThi=ct)
-            .values("thiSinh")
-            .annotate(
-                prev_bgd_score=Sum(
-                    "diem",
-                    filter=Q(vongThi=prev_bgd_round),
-                ),
-                total_diem=Sum("diem"),
-                total_time=Sum("thoiGian"),
-            )
-            .filter(prev_bgd_score__gt=0)   # chỉ lấy những người đã có điểm BGD vòng trước
-            .order_by(
-                "-prev_bgd_score",   # 1) điểm BGD vòng trước (Top 10)
-                "-total_diem",       # 2) điểm tổng
-                "total_time",        # 3) tổng thời gian (ít hơn xếp trên)
-                "thiSinh",           # 4) ổn định thứ tự
-            )[:vt_bgd.bgd_top_limit]
+        annotate_kwargs = dict(
+            prev_bgd_score=Sum("diem", filter=Q(vongThi=prev_bgd_round)),
+            total_diem=Sum("diem"),
+            total_time=Sum("thoiGian"),
         )
+        if prev_special_round:
+            annotate_kwargs["special_score"] = Sum("diem", filter=Q(vongThi=prev_special_round))
+
+        qs = (
+            PhieuChamDiem.objects.filter(cuocThi=ct)
+            .values("thiSinh")
+            .annotate(**annotate_kwargs)
+            .filter(prev_bgd_score__gt=0)
+        )
+
+        if prev_special_round:
+            qs = qs.filter(special_score__gt=0)
+
+        score_rows = qs.order_by(
+            "-prev_bgd_score",
+            "-total_diem",
+            "total_time",
+            "thiSinh",
+        )[:vt_bgd.bgd_top_limit]
+
     else:
-        # Không có vòng BGD trước -> dùng như cũ:
-        # lấy Top X theo tổng điểm các vòng thường, tie-break bằng thời gian
-        score_rows = (
-            PhieuChamDiem.objects
-            .filter(
+        annotate_kwargs = dict(
+            total_diem=Sum("diem"),
+            total_time=Sum("thoiGian"),
+        )
+        if prev_special_round:
+            annotate_kwargs["special_score"] = Sum("diem", filter=Q(vongThi=prev_special_round))
+
+        qs = (
+            PhieuChamDiem.objects.filter(
                 cuocThi=ct,
                 vongThi__is_bgd_round=False,
             )
             .values("thiSinh")
-            .annotate(
-                total_diem=Sum("diem"),
-                total_time=Sum("thoiGian"),
-            )
-            .order_by(
-                "-total_diem",
-                "total_time",
-                "thiSinh",
-            )[:vt_bgd.bgd_top_limit]
+            .annotate(**annotate_kwargs)
         )
+
+        if prev_special_round:
+            qs = qs.filter(special_score__gt=0)
+
+        score_rows = qs.order_by(
+            "-total_diem",
+            "total_time",
+            "thiSinh",
+        )[:vt_bgd.bgd_top_limit]
+
 
     ts_ids = [row["thiSinh"] for row in score_rows]
     contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
     order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
     contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
     return contestants
+
 
 def _auto_login_bgd_as_judge(request, bgd):
     """
@@ -124,80 +152,31 @@ def _auto_login_bgd_as_judge(request, bgd):
     return judge
 
 
-
-
-# ===== Helper: tạo QR đơn (chấm điểm / đối kháng) =====
-def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None, vt=None):
-    """
-    Tạo ảnh QR + chữ bên dưới cho 1 BGD.
-    kind: "score" (chấm điểm) hoặc "battle" (đối kháng).
-    """
-    import qrcode
-    from PIL import Image, ImageDraw, ImageFont
-
-    if kind == "battle":
-        target_url = request.build_absolute_uri(
-            reverse("bgd-battle-go", args=[bgd.token])
-        )
-        suffix = "Battle"
-    else:
-        # QR chấm điểm: cần kèm id cuộc thi & id vòng thi
-        if ct is None or vt is None:
-            raise ValueError("Thiếu cuộc thi (ct) hoặc vòng thi (vt) khi tạo QR chấm điểm.")
-        target_url = request.build_absolute_uri(
-            reverse("bgd-go", args=[ct.id, vt.id, bgd.token])
-        )
-        suffix = "Score"
-
-
-    # --- Tạo ảnh QR ---
-    qr = qrcode.QRCode(box_size=10, border=4)
-    qr.add_data(target_url)
-    qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-
-    W, H = qr_img.size
-    padding_y = int(H * 0.25)  # khoảng dành cho chữ phía dưới
-
-    canvas = Image.new("RGB", (W, H + padding_y), "white")
-    canvas.paste(qr_img, (0, 0))
-
-    draw = ImageDraw.Draw(canvas)
-    label = f"{bgd.maBGD} — {suffix}"
-
-    try:
-        font_path = getattr(settings, "BGD_QR_FONT_PATH", None)
-        if font_path:
-            font = ImageFont.truetype(font_path, size=int(H * 0.12))
-        else:
-            font = ImageFont.load_default()
-    except Exception:
-        font = ImageFont.load_default()
-
-    bbox = draw.textbbox((0, 0), label, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-
-    text_x = (W - text_w) // 2
-    text_y = H + (padding_y - text_h) // 2
-
-
-    draw.text((text_x, text_y), label, font=font, fill="black")
-
-    return canvas
-
+# ===== Helper: tạo QR đơn (tự chọn go / go-stars theo Top X) =====
 def _make_bgd_single_qr_image(bgd, request, ct, vt):
     """
     Sinh 1 ảnh PNG nền trắng, ở giữa là 1 QR của vòng thi BGD
-    và bên dưới có text tên vòng thi.
+    và bên dưới có text (BGD + tên vòng).
+
+    - Nếu vt.bgd_top_limit == 10 => QR trỏ tới bgd-go-stars
+    - Ngược lại                  => QR trỏ tới bgd-go
     """
     import qrcode
     from qrcode.constants import ERROR_CORRECT_H
     from PIL import Image, ImageDraw, ImageFont
 
+    if ct is None or vt is None:
+        raise ValueError("Thiếu cuộc thi (ct) hoặc vòng thi (vt) khi tạo QR BGD.")
+
+    # Chọn view đích theo cấu hình Top
+    if getattr(vt, "bgd_top_limit", None) == 10:
+        view_name = "bgd-go-stars"
+    else:
+        view_name = "bgd-go"
+
     # URL chấm điểm của BGD cho vòng thi này
     target_url = request.build_absolute_uri(
-        reverse("bgd-go", args=[ct.id, vt.id, bgd.token])
+        reverse(view_name, args=[ct.id, vt.id, bgd.token])
     )
 
     qr = qrcode.QRCode(
@@ -230,43 +209,39 @@ def _make_bgd_single_qr_image(bgd, request, ct, vt):
 
     # helper đo text, tương thích nhiều version Pillow
     def measure(text: str):
-        # Pillow mới: dùng textbbox
         if hasattr(draw, "textbbox"):
             bbox = draw.textbbox((0, 0), text, font=font)
             return bbox[2] - bbox[0], bbox[3] - bbox[1]
-        # fallback: dùng font.getbbox / getsize
         if hasattr(font, "getbbox"):
             bbox = font.getbbox(text)
             return bbox[2] - bbox[0], bbox[3] - bbox[1]
         return font.getsize(text)
 
+    # # Hai dòng label: BGD + tên vòng
+    # line1 = f"BGD {bgd.maBGD}"
+    # line2 = vt.tenVongThi or ""
+
+    # w1, h1 = measure(line1)
+    # has_line2 = bool(line2.strip())
+    # if has_line2:
+    #     w2, h2 = measure(line2)
+    # else:
+    #     w2, h2 = 0, 0
+
+    # line_spacing = 4
+    # total_h = h1 + (h2 + line_spacing if has_line2 else 0)
+
+    # label_top = qr_y + qr_h + padding
+    # base_y = label_top + max((label_height - total_h) // 2, 0)
+
+    # x1 = (card_w - w1) // 2
+    # draw.text((x1, base_y), line1, fill="black", font=font)
+
+    # if has_line2:
+    #     x2 = (card_w - w2) // 2
+    #     draw.text((x2, base_y + h1 + line_spacing), line2, fill="black", font=font)
+
     return card
-
-# def _make_bgd_dual_qr_image(bgd, request, ct, vt):
-#     """
-#     Tạo 1 ảnh chứa 2 QR:
-#       - trái: chấm điểm
-#       - phải: đối kháng
-#     Mỗi QR có label tương ứng phía dưới.
-#     """
-#     from PIL import Image
-
-#     left = _make_bgd_single_qr_image(bgd, request, "score", ct, vt)
-#     right = _make_bgd_single_qr_image(bgd, request, "battle")
-
-
-
-#     W, H = left.size  # giả định 2 ảnh cùng size
-#     gap = int(W * 0.10)  # khoảng cách giữa 2 QR
-
-#     new_w = W * 2 + gap
-#     new_h = H
-
-#     canvas = Image.new("RGB", (new_w, new_h), "white")
-#     canvas.paste(left, (0, 0))
-#     canvas.paste(right, (W + gap, 0))
-
-#     return canvas
 
 
 def bgd_list(request):
@@ -274,15 +249,18 @@ def bgd_list(request):
     for b in BanGiamDoc.objects.order_by("maBGD"):
         has = GiamKhao.objects.filter(
             maNV=b.maBGD,
-            hoTen__iexact=b.ten,   # so sánh cả mã & họ tên (không phân biệt hoa/thường)
+            hoTen__iexact=b.ten,  # so sánh cả mã & họ tên (không phân biệt hoa/thường)
         ).exists()
-        out.append({
-            "maBGD": b.maBGD,
-            "ten": b.ten,
-            "token": b.token,
-            "has_judge": has,
-        })
+        out.append(
+            {
+                "maBGD": b.maBGD,
+                "ten": b.ten,
+                "token": b.token,
+                "has_judge": has,
+            }
+        )
     return render(request, "bgd/list.html", {"bgds": out})
+
 
 def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
     bgd = BanGiamDoc.objects.filter(token=token).first()
@@ -296,9 +274,7 @@ def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
         raise Http404("Cuộc thi không tồn tại.")
 
     vt_bgd = (
-        VongThi.objects
-        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
-        .first()
+        VongThi.objects.filter(id=vt_id, cuocThi=ct, is_bgd_round=True).first()
     )
     if not vt_bgd:
         raise Http404("Vòng thi BGD không tồn tại hoặc không thuộc cuộc thi này.")
@@ -311,7 +287,7 @@ def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
     request.session["bgd_token"] = token
     request.session.modified = True
 
-    # === LẤY DANH SÁCH THÍ SINH THEO TOP X (dựa trên Top 10, Tổng, Thời gian) ===
+    # Lấy danh sách thí sinh theo Top X
     contestants = _select_bgd_contestants(ct, vt_bgd)
 
     # Fallback: nếu chưa cấu hình vòng BGD/top_limit hoặc chưa có dữ liệu
@@ -348,11 +324,10 @@ def bgd_go_stars(request, ct_id: int, vt_id: int, token: str):
     }
     return render(request, "bgd/go_stars.html", context)
 
+
 def bgd_qr_index(request, token=None):
     items = list(
-        BanGiamDoc.objects
-        .order_by("maBGD")
-        .values("maBGD", "ten", "token")
+        BanGiamDoc.objects.order_by("maBGD").values("maBGD", "ten", "token")
     )
 
     # Xác định cuộc thi đang chọn (ct):
@@ -375,14 +350,15 @@ def bgd_qr_index(request, token=None):
         vt_param = request.GET.get("vt")
         if vt_param:
             vt = (
-                VongThi.objects
-                .filter(id=vt_param, cuocThi=ct, is_bgd_round=True)
-                .first()
+                VongThi.objects.filter(
+                    id=vt_param,
+                    cuocThi=ct,
+                    is_bgd_round=True,
+                ).first()
             )
         if not vt:
             vt = (
-                VongThi.objects
-                .filter(cuocThi=ct, is_bgd_round=True)
+                VongThi.objects.filter(cuocThi=ct, is_bgd_round=True)
                 .order_by("-id")
                 .first()
             )
@@ -391,8 +367,12 @@ def bgd_qr_index(request, token=None):
     def _go_url(tok):
         if not ct or not vt:
             return "#"
+        if getattr(vt, "bgd_top_limit", None) == 10:
+            view_name = "bgd-go-stars"
+        else:
+            view_name = "bgd-go"
         return request.build_absolute_uri(
-            reverse("bgd-go", args=[ct.id, vt.id, tok])
+            reverse(view_name, args=[ct.id, vt.id, tok])
         )
 
     for it in items:
@@ -404,7 +384,9 @@ def bgd_qr_index(request, token=None):
     focus_token = token or request.GET.get("focus")
     if focus_token and items:
         try:
-            idx = next(i for i, it in enumerate(items) if it["token"] == focus_token)
+            idx = next(
+                i for i, it in enumerate(items) if it["token"] == focus_token
+            )
             if idx != 0:
                 items = items[idx:] + items[:idx]
         except StopIteration:
@@ -412,8 +394,7 @@ def bgd_qr_index(request, token=None):
 
     # Danh sách cuộc thi cho dropdown: chỉ lấy cuộc thi đang bật
     competitions = list(
-        CuocThi.objects
-        .filter(trangThai=True)
+        CuocThi.objects.filter(trangThai=True)
         .order_by("-id")
         .values("id", "tenCuocThi")
     )
@@ -422,8 +403,7 @@ def bgd_qr_index(request, token=None):
     rounds = []
     if ct:
         rounds = list(
-            VongThi.objects
-            .filter(cuocThi=ct, is_bgd_round=True)
+            VongThi.objects.filter(cuocThi=ct, is_bgd_round=True)
             .order_by("-id")
             .values("id", "tenVongThi", "bgd_top_limit")
         )
@@ -441,7 +421,6 @@ def bgd_qr_index(request, token=None):
     )
 
 
-
 def bgd_qr_png(request, ct_id: int, vt_id: int, token: str):
     # Đảm bảo Pillow đã cài
     try:
@@ -453,22 +432,22 @@ def bgd_qr_png(request, ct_id: int, vt_id: int, token: str):
     if not ct:
         raise Http404("Không tìm thấy cuộc thi tương ứng với mã QR này.")
 
-    vt = VongThi.objects.filter(id=vt_id, cuocThi=ct, is_bgd_round=True).only("id", "tenVongThi").first()
+    vt = VongThi.objects.filter(
+        id=vt_id, cuocThi=ct, is_bgd_round=True
+    ).first()
     if not vt:
         raise Http404("Không tìm thấy vòng thi BGD tương ứng với mã QR này.")
 
     bgd = (
-        BanGiamDoc.objects
-        .filter(token=token)
+        BanGiamDoc.objects.filter(token=token)
         .only("token", "maBGD", "ten")
         .first()
     )
     if not bgd:
         raise Http404("Không tìm thấy Ban Giám Đốc tương ứng với mã QR này.")
 
-    # Ảnh PNG chứa 2 QR (chấm điểm + đối kháng)
+    # Ảnh PNG chứa 1 QR (tự chọn go / go-stars theo Top X)
     img = _make_bgd_single_qr_image(bgd, request, ct, vt)
-
 
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -478,9 +457,7 @@ def bgd_qr_png(request, ct_id: int, vt_id: int, token: str):
 
 def bgd_qr_zip_all(request):
     bgds = list(
-        BanGiamDoc.objects
-        .order_by("maBGD")
-        .only("token", "maBGD", "ten")
+        BanGiamDoc.objects.order_by("maBGD").only("token", "maBGD", "ten")
     )
     if not bgds:
         return HttpResponse(
@@ -499,8 +476,7 @@ def bgd_qr_zip_all(request):
         )
 
     vt = (
-        VongThi.objects
-        .filter(cuocThi=ct, is_bgd_round=True)
+        VongThi.objects.filter(cuocThi=ct, is_bgd_round=True)
         .order_by("-id")
         .first()
     )
@@ -513,7 +489,7 @@ def bgd_qr_zip_all(request):
     zip_buf = BytesIO()
     with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for bgd in bgds:
-            # Mỗi file PNG trong zip cũng chứa 2 QR giống như trên trang
+            # Mỗi file PNG chứa 1 QR (tự chọn go / go-stars theo Top X)
             img = _make_bgd_single_qr_image(bgd, request, ct, vt)
 
             img_bytes = BytesIO()
@@ -522,7 +498,6 @@ def bgd_qr_zip_all(request):
 
             filename = f"QR_{bgd.maBGD}.png"
             zf.writestr(filename, img_bytes.getvalue())
-
 
     zip_buf.seek(0)
     resp = HttpResponse(zip_buf.getvalue(), content_type="application/zip")
@@ -542,9 +517,7 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         raise Http404("Cuộc thi không tồn tại.")
 
     vt_bgd = (
-        VongThi.objects
-        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
-        .first()
+        VongThi.objects.filter(id=vt_id, cuocThi=ct, is_bgd_round=True).first()
     )
     if not vt_bgd:
         raise Http404("Vòng thi BGD không tồn tại hoặc không thuộc cuộc thi này.")
@@ -559,9 +532,15 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
     request.session.modified = True
 
     print("[BGD DEBUG] Cuoc thi:", ct.id, ct.tenCuocThi)
-    print("[BGD DEBUG] Vong BGD:", vt_bgd.id, vt_bgd.tenVongThi, "Top limit =", vt_bgd.bgd_top_limit)
+    print(
+        "[BGD DEBUG] Vong BGD:",
+        vt_bgd.id,
+        vt_bgd.tenVongThi,
+        "Top limit =",
+        vt_bgd.bgd_top_limit,
+    )
 
-    # === LẤY DANH SÁCH THÍ SINH THEO TOP X (dựa trên Top 10, Tổng, Thời gian) ===
+    # LẤY DANH SÁCH THÍ SINH THEO TOP X
     contestants = _select_bgd_contestants(ct, vt_bgd)
 
     # Nếu chưa cấu hình vòng BGD/top_limit hoặc chưa có dữ liệu -> fallback Top 5 toàn cuộc thi
@@ -598,6 +577,7 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
     }
     return render(request, "bgd/go.html", context)
 
+
 def bgd_battle_go(request, token: str):
     bgd = BanGiamDoc.objects.filter(token=token).first()
     if not bgd:
@@ -612,6 +592,8 @@ def bgd_battle_go(request, token: str):
     request.session.modified = True
 
     return redirect("battle")
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def bgd_save_score(request):
@@ -655,7 +637,10 @@ def bgd_save_score(request):
     bgd = BanGiamDoc.objects.filter(token=bgd_token).first()
     if not bgd:
         return JsonResponse(
-            {"ok": False, "message": "BGD chưa được xác định trong phiên làm việc."},
+            {
+                "ok": False,
+                "message": "BGD chưa được xác định trong phiên làm việc.",
+            },
             status=401,
         )
 
@@ -669,8 +654,12 @@ def bgd_save_score(request):
         ct = CuocThi.objects.filter(pk=ct_id).first()
     if not ct:
         ct = (
-            CuocThi.objects.filter(tenCuocThi__iexact="Chung Kết").order_by("-id").first()
-            or CuocThi.objects.filter(tenCuocThi__iexact="Chung ket").order_by("-id").first()
+            CuocThi.objects.filter(tenCuocThi__iexact="Chung Kết")
+            .order_by("-id")
+            .first()
+            or CuocThi.objects.filter(tenCuocThi__iexact="Chung ket")
+            .order_by("-id")
+            .first()
         )
     if not ct:
         return JsonResponse(
@@ -685,8 +674,7 @@ def bgd_save_score(request):
         vt = VongThi.objects.filter(pk=vt_id, cuocThi=ct).first()
     if not vt:
         vt = (
-            VongThi.objects
-            .filter(cuocThi=ct, is_bgd_round=True)
+            VongThi.objects.filter(cuocThi=ct, is_bgd_round=True)
             .order_by("-id")
             .first()
         )
@@ -712,7 +700,7 @@ def bgd_save_score(request):
                 star = 1
             if star > 5:
                 star = 5
-            diem_int = star * 20                 # 20,40,60,80,100
+            diem_int = star * 20  # 20,40,60,80,100
     else:
         # mode "score": giữ nguyên 0..100 (chấm slider)
         diem_int = int(round(score_val))
@@ -807,7 +795,8 @@ def bgd_save_score(request):
         }
     )
 
-# --- 4) View chấm cho BGD: khóa vào "Chung Kết", tái dùng score_view ---
+
+# --- View chấm cho BGD: tái dùng score_view, khoá vào cuộc thi trong session ---
 def score_bgd_view(request):
     ct_id = request.session.get("bgd_ct_id")
     if not ct_id:

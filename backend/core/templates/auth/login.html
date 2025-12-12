@@ -3,19 +3,28 @@
 {% block content %}
 <div class="mx-auto max-w-md px-4">
   <div class="glass rounded-2xl p-8 mt-10 shadow-2xl">
-    <h1 class="text-2xl font-bold mb-4">Đăng nhập Giám khảo</h1>
+    <h1 class="text-2xl font-bold mb-4">Đăng nhập</h1>
+
     {% if error %}
       <div class="mb-4 rounded-lg bg-red-500/20 border border-red-400/40 px-3 py-2">
         {{ error }}
       </div>
     {% endif %}
-    <form method="post" class="space-y-4">
+
+    <form method="post" class="space-y-4" novalidate>
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
-      <label class="block text-sm opacity-90">Email Giám khảo</label>
-      <input name="email" type="email" required
+
+      <label class="block text-sm opacity-90">Email công ty</label>
+      <input name="email"
+             type="email"
+             required
+             value="{{ email|default:'' }}"
              class="w-full rounded-xl px-3 py-2 text-black"
-             placeholder="vd: judge@example.com" />
+             placeholder="vd: username@fpt.net"
+             pattern="^[^@\\s]+@(fpt\\.com|fpt\\.net|vienthong\\.com)$"
+             title="Chỉ chấp nhận email đuôi: fpt.com, fpt.net, vienthong.com" />
+
       <button type="submit"
               class="mt-2 w-full px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 transition">
         Đăng nhập
