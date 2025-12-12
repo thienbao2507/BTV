@@ -146,6 +146,14 @@ def _flatten(ct: CuocThi):
         .distinct()
     )
 
+    special_sort_active = False
+    if vt_special_ids and bt_special_ids and special_members_ma:
+        special_sort_active = PhieuChamDiem.objects.filter(
+            cuocThi=ct,
+            vongThi_id__in=vt_special_ids,
+            baiThi_id__in=bt_special_ids,
+        ).exists()
+
     # ==== Gom dữ liệu từng thí sinh ====
     data = []
     bt_ids_in_order = [c["id"] for c in cols_meta if c.get("kind") == "score"]
@@ -192,11 +200,11 @@ def _flatten(ct: CuocThi):
                 if isinstance(sc_sp, (int, float)):
                     sp_total += float(sc_sp)
 
-        if ts.maNV in special_members_ma:
-            # Winner nếu có điểm > 0 ở vòng đặc biệt (vì loser đã bị set = 0 ở views_score.py)
-            special_group = 2 if sp_total > 0 else 1
+        if special_sort_active and (ts.maNV in special_members_ma):
+            special_group = 1
         else:
             special_group = 0
+
 
         data.append({
             "ts": ts,
@@ -212,12 +220,13 @@ def _flatten(ct: CuocThi):
 
     data.sort(
         key=lambda d: (
-            -int(d.get("__special_group", 0)),                 # Winner(2) > Loser(1) > None(0)
-            -float(d["total_score"]),                          # Tổng điểm giảm dần
-            _time_key(d["total_time_sec"]),                    # Tổng thời gian tăng dần
-            _sv(getattr(d["ts"], "maNV", "")),                 # ổn định
+            -int(d.get("__special_group", 0)),
+            -float(d["total_score"]),
+            _time_key(d["total_time_sec"]),
+            _sv(getattr(d["ts"], "maNV", "")),
         )
     )
+
 
     # Gán STT + build special_groups cùng thứ tự rows
     rows = []
