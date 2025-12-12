@@ -13,12 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Requirements
-COPY requirements.txt /app/requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --upgrade pip && pip install -r /app/requirements.txt
 
 COPY . /app/
 
-RUN python manage.py collectstatic --noinput
+RUN python backend/manage.py collectstatic --noinput
 
 # Default: keep container alive until we mount code & run command from compose
 # CMD ["bash", "-lc", "sleep infinity"]
