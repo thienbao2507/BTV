@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg, Max
+from decimal import Decimal
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side  # <- thêm Border, Side
 from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
 from .models import SpecialRoundPairMember
@@ -178,7 +179,7 @@ def _flatten(ct: CuocThi):
         for bt_id in bt_ids_in_order:
             sc = score_map.get((ts.maNV, bt_id), "")
             row.append(sc)
-            if isinstance(sc, (int, float)):
+            if isinstance(sc, (int, float, Decimal)):
                 total_score += float(sc)
 
             tm_seconds = time_map.get((ts.maNV, bt_id))
@@ -193,17 +194,25 @@ def _flatten(ct: CuocThi):
         row.append(_fmt_mmss(total_time_sec) if has_any_time else "")
 
         # ==== Tính tổng điểm ở các bài "vòng đặc biệt" để suy ra group ====
+        # ==== Tính nhóm vòng đặc biệt: Winner(2) > Loser(1) > NoScore(0) ====
         sp_total = 0.0
+        sp_has_score = False
+
         if ts.maNV in special_members_ma and bt_special_ids:
             for bt_id in bt_special_ids:
                 sc_sp = score_map.get((ts.maNV, bt_id), "")
-                if isinstance(sc_sp, (int, float)):
+                if isinstance(sc_sp, (int, float, Decimal)):
+                    sp_has_score = True
                     sp_total += float(sc_sp)
 
         if special_sort_active and (ts.maNV in special_members_ma):
-            special_group = 1
+            if sp_has_score:
+                special_group = 2 if sp_total > 0 else 1
+            else:
+                special_group = 0
         else:
             special_group = 0
+
 
 
         data.append({

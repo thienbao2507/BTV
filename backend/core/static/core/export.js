@@ -152,19 +152,24 @@
   // --- Sorting ---
   const sortState = { index: null, dir: 1 }; // 1=asc, -1=desc
 function toggleSort(i) {
-  if (sortState.index === i) sortState.dir *= -1;
-  else {
+  if (sortState.index === i) {
+    sortState.dir *= -1;
+  } else {
     sortState.index = i;
     sortState.dir = (i === TOTAL_IDX ? -1 : 1);
   }
+
   viewRows.sort(compare(i, sortState.dir));
   window.viewRows = viewRows;
   renderBody(viewRows);
+
+  // UI cue
   Array.from(head.children).forEach((th, j) => {
     const base = columns[j] || '';
     th.innerHTML = fmtHeader(base + (j === sortState.index ? (sortState.dir === 1 ? ' ▲' : ' ▼') : ''));
   });
 }
+
 
   function parseTimeToSec(v) {
     if (v === null || v === undefined) return Infinity;
