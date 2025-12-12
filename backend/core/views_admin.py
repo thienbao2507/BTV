@@ -290,6 +290,32 @@ def import_view(request):
         }
         
 )
+def _extract_manv_from_filename_stem(stem: str) -> str | None:
+    """
+    Nhận vào phần tên file không có đuôi (stem) và trả về maNV nếu tìm được.
+    Hỗ trợ tên file dạng:
+      - 00041009 - Đỗ Văn Chiến - PSG02USR
+      - 00053160_Nguyễn Trung Kiên_THN05USR2
+      - avatar_00041009_do_van_chien
+    Ưu tiên bắt chuỗi 8 chữ số (giữ được số 0 đầu).
+    """
+    if not stem:
+        return None
+
+    s = stem.strip()
+
+    # 1) Ưu tiên: đúng 8 chữ số nằm độc lập trong chuỗi
+    m = re.search(r"(?<!\d)(\d{8})(?!\d)", s)
+    if m:
+        return m.group(1)
+
+    # 2) Fallback: lấy cụm số đầu chuỗi (>=6 số) nếu bạn có maNV không đúng 8 số
+    m2 = re.match(r"^\s*(\d{6,})", s)
+    if m2:
+        return m2.group(1)
+
+    return None
+
 
 @judge_required
 def upload_avatars_view(request):
@@ -314,8 +340,8 @@ def upload_avatars_view(request):
             base_name = os.path.basename(original_name)
             stem, ext = os.path.splitext(base_name)
 
-            ma = (stem or "").strip()
             ext = ext.lower()
+            ma = _extract_manv_from_filename_stem(stem)
 
             # Chỉ nhận jpg/jpeg/png
             if ext not in [".jpg", ".jpeg", ".png"]:

@@ -127,27 +127,27 @@ def _auto_login_bgd_as_judge(request, bgd):
 
 
 # ===== Helper: tạo QR đơn (chấm điểm / đối kháng) =====
-def _make_bgd_single_qr_image(bgd, request, kind: str, ct=None, vt=None):
+def _make_bgd_single_qr_image(bgd, request, ct, vt):
     """
-    Tạo ảnh QR + chữ bên dưới cho 1 BGD.
-    kind: "score" (chấm điểm) hoặc "battle" (đối kháng).
+    Sinh 1 ảnh PNG nền trắng, ở giữa là 1 QR của vòng thi BGD
+    và bên dưới có text tên vòng thi.
     """
     import qrcode
+    from qrcode.constants import ERROR_CORRECT_H
     from PIL import Image, ImageDraw, ImageFont
 
-    if kind == "battle":
-        target_url = request.build_absolute_uri(
-            reverse("bgd-battle-go", args=[bgd.token])
-        )
-        suffix = "Battle"
+    # URL chấm điểm của BGD cho vòng thi này
+    if vt.is_bgd_round and getattr(vt, "bgd_top_limit", None) == 10:
+        # Vòng BGD Top 10 → chấm bằng sao
+        view_name = "bgd-go-stars"
     else:
-        # QR chấm điểm: cần kèm id cuộc thi & id vòng thi
-        if ct is None or vt is None:
-            raise ValueError("Thiếu cuộc thi (ct) hoặc vòng thi (vt) khi tạo QR chấm điểm.")
-        target_url = request.build_absolute_uri(
-            reverse("bgd-go", args=[ct.id, vt.id, bgd.token])
-        )
-        suffix = "Score"
+        # Các vòng BGD khác → chấm bằng slider
+        view_name = "bgd-go"
+
+    target_url = request.build_absolute_uri(
+        reverse(view_name, args=[ct.id, vt.id, bgd.token])
+    )
+    suffix = "Score"
 
 
     # --- Tạo ảnh QR ---
@@ -391,8 +391,13 @@ def bgd_qr_index(request, token=None):
     def _go_url(tok):
         if not ct or not vt:
             return "#"
+        if vt.is_bgd_round and vt.bgd_top_limit == 10:
+            view_name = "bgd-go-stars"
+        else:
+            view_name = "bgd-go"
+
         return request.build_absolute_uri(
-            reverse("bgd-go", args=[ct.id, vt.id, tok])
+            reverse(view_name, args=[ct.id, vt.id, tok])
         )
 
     for it in items:
@@ -453,7 +458,13 @@ def bgd_qr_png(request, ct_id: int, vt_id: int, token: str):
     if not ct:
         raise Http404("Không tìm thấy cuộc thi tương ứng với mã QR này.")
 
-    vt = VongThi.objects.filter(id=vt_id, cuocThi=ct, is_bgd_round=True).only("id", "tenVongThi").first()
+    vt = (
+        VongThi.objects
+        .filter(id=vt_id, cuocThi=ct, is_bgd_round=True)
+        .only("id", "tenVongThi", "bgd_top_limit", "is_bgd_round")
+        .first()
+    )
+
     if not vt:
         raise Http404("Không tìm thấy vòng thi BGD tương ứng với mã QR này.")
 
@@ -588,15 +599,21 @@ def bgd_go(request, ct_id: int, vt_id: int, token: str):
         )
         scores_by_ts = {s.thiSinh_id: s.diem for s in scores_qs}
         for ts in contestants:
-            ts.current_bgd_score = scores_by_ts.get(ts.pk)
+            score = scores_by_ts.get(ts.pk)
+            ts.current_bgd_score = score
 
     context = {
         "bgd": bgd,
         "judge": judge,
         "ct": ct,
+        "vt": vt_bgd,
         "contestants": contestants,
+        # Dùng cho vòng chấm sao (go_stars)
+        "star_range": range(1, 6),
     }
     return render(request, "bgd/go.html", context)
+
+
 
 def bgd_battle_go(request, token: str):
     bgd = BanGiamDoc.objects.filter(token=token).first()
