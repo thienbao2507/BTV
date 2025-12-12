@@ -1007,28 +1007,34 @@ def _apply_special_round_bonus_if_ready(bt, thi_sinh, judge, raw_total, raw_time
     if not ct or not thi_sinh:
         return
 
-    # 1) Ghi lại log raw (điểm + thời gian) cho lần chấm này
-    SpecialRoundScoreLog.objects.update_or_create(
-        cuocThi=ct, vongThi=vt, baiThi=bt, thiSinh=thi_sinh, giamKhao=judge,
-        defaults=dict(raw_score=raw_total, raw_time=raw_time),
-    )
-
-    # 2) Lấy cặp của thí sinh này trong vòng hiện tại
+    # 2) Lấy cặp của thí sinh này trong vòng hiện tại (lấy trước để có pair_member)
     pair_member = SpecialRoundPairMember.objects.filter(
-        pair__vongThi=vt, thiSinh=thi_sinh
+        pair__vongThi=vt, pair__cuocThi=ct, thiSinh=thi_sinh
     ).select_related("pair").first()
     if not pair_member:
         return
 
-    # 3) Gom kết quả cả cặp để biết winner/loser (map {ts_id: 100|0})
-    #    (Hàm này vẫn trả 100 cho winner, ta chỉ dùng nó để biết ai thắng/thua.)
-    result_map = compute_special_round_pair_result(pair_member.pair, bai_thi=bt)
+    # 1) Ghi lại log raw (điểm + thời gian) cho lần chấm này
+    SpecialRoundScoreLog.objects.update_or_create(
+        cuocThi=ct,
+        vongThi=vt,
+        baiThi=bt,
+        pair_member=pair_member,
+        giamKhao=judge,
+        defaults=dict(raw_score=raw_total, raw_time=raw_time),
+    )
 
-    # 4) Áp dụng: Winner giữ nguyên điểm raw, Loser = 0
-    #    - Lấy 2 thí sinh trong cặp
+
+    result_map = compute_special_round_pair_result(ct, vt, bt, pair_member.pair)
+
+    # CHỐT: chưa đủ dữ liệu để kết luận thì KHÔNG set 0 cho ai cả
+    if not result_map or len(result_map) < 2:
+        return
+
     members = SpecialRoundPairMember.objects.filter(pair=pair_member.pair).values_list("thiSinh_id", flat=True)
     for ts_id in members:
         is_winner = (result_map.get(ts_id, 0) == 100)
+
 
         # Tập phiếu của thí sinh ts_id trong BÀI hiện tại
         qs = PhieuChamDiem.objects.filter(

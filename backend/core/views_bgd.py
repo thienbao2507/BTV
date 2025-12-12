@@ -46,46 +46,67 @@ def _select_bgd_contestants(ct, vt_bgd):
         .first()
     )
 
+    # Tìm vòng đặc biệt gần nhất trước vòng BGD hiện tại
+    prev_special_round = (
+        VongThi.objects.filter(cuocThi=ct, is_special_bonus_round=True, id__lt=vt_bgd.id)
+        .order_by("-id")
+        .first()
+    )
+
+
     if prev_bgd_round:
         # Dựa trên điểm BGD vòng trước + tổng điểm + tổng thời gian
-        score_rows = (
+        annotate_kwargs = dict(
+            prev_bgd_score=Sum("diem", filter=Q(vongThi=prev_bgd_round)),
+            total_diem=Sum("diem"),
+            total_time=Sum("thoiGian"),
+        )
+        if prev_special_round:
+            annotate_kwargs["special_score"] = Sum("diem", filter=Q(vongThi=prev_special_round))
+
+        qs = (
             PhieuChamDiem.objects.filter(cuocThi=ct)
             .values("thiSinh")
-            .annotate(
-                prev_bgd_score=Sum(
-                    "diem",
-                    filter=Q(vongThi=prev_bgd_round),
-                ),
-                total_diem=Sum("diem"),
-                total_time=Sum("thoiGian"),
-            )
-            .filter(prev_bgd_score__gt=0)  # chỉ lấy những người đã có điểm BGD vòng trước
-            .order_by(
-                "-prev_bgd_score",  # 1) điểm BGD vòng trước (Top 10)
-                "-total_diem",      # 2) điểm tổng
-                "total_time",       # 3) tổng thời gian (ít hơn xếp trên)
-                "thiSinh",          # 4) ổn định thứ tự
-            )[:vt_bgd.bgd_top_limit]
+            .annotate(**annotate_kwargs)
+            .filter(prev_bgd_score__gt=0)
         )
+
+        if prev_special_round:
+            qs = qs.filter(special_score__gt=0)
+
+        score_rows = qs.order_by(
+            "-prev_bgd_score",
+            "-total_diem",
+            "total_time",
+            "thiSinh",
+        )[:vt_bgd.bgd_top_limit]
+
     else:
-        # Không có vòng BGD trước -> dùng như cũ:
-        # lấy Top X theo tổng điểm các vòng thường, tie-break bằng thời gian
-        score_rows = (
+        annotate_kwargs = dict(
+            total_diem=Sum("diem"),
+            total_time=Sum("thoiGian"),
+        )
+        if prev_special_round:
+            annotate_kwargs["special_score"] = Sum("diem", filter=Q(vongThi=prev_special_round))
+
+        qs = (
             PhieuChamDiem.objects.filter(
                 cuocThi=ct,
                 vongThi__is_bgd_round=False,
             )
             .values("thiSinh")
-            .annotate(
-                total_diem=Sum("diem"),
-                total_time=Sum("thoiGian"),
-            )
-            .order_by(
-                "-total_diem",
-                "total_time",
-                "thiSinh",
-            )[:vt_bgd.bgd_top_limit]
+            .annotate(**annotate_kwargs)
         )
+
+        if prev_special_round:
+            qs = qs.filter(special_score__gt=0)
+
+        score_rows = qs.order_by(
+            "-total_diem",
+            "total_time",
+            "thiSinh",
+        )[:vt_bgd.bgd_top_limit]
+
 
     ts_ids = [row["thiSinh"] for row in score_rows]
     contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
