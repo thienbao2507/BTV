@@ -5,7 +5,7 @@ from django.db import transaction
 
 from core.models import ThiSinh, CuocThi, ThiSinhVoting, VotingRecord
 
-ALLOWED_VOTER_DOMAINS = {"fpt.com", "fpt.net", "vienthong.com"}
+ALLOWED_VOTER_DOMAINS = {"fpt.com", "fpt.net", "vienthongtin.com"}
 
 def _login_email(request) -> str:
     # Ưu tiên judge_email, sau đó đến auth_email (người dùng thường)
