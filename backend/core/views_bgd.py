@@ -23,39 +23,35 @@ from .models import (
 )
 from .views_score import score_view  # tái dùng view chấm hiện có
 
-
 def _select_bgd_contestants(ct, vt_bgd):
     """
     Chọn danh sách thí sinh cho vòng BGD hiện tại (vt_bgd) theo cấu hình Top X.
 
-    - Nếu tồn tại 1 vòng BGD trước đó trong cùng cuộc thi:
-        + Ưu tiên điểm BGD của vòng trước (Top 10, Top 20...).
-        + Tie-break 1: điểm tổng của toàn cuộc thi.
-        + Tie-break 2: tổng thời gian (ít hơn xếp trên).
-    - Nếu không có vòng BGD trước đó:
-        + Fallback: dùng tổng điểm các vòng KHÔNG phải BGD
-          (như logic cũ dùng để lấy Top 10 từ Top 50/Top 20).
+    Nếu có vòng BGD liền trước (ví dụ Top10 trước Top5):
+      - Dùng vòng BGD trước để LỌC danh sách (chỉ lấy những thí sinh đã có điểm ở vòng đó)
+      - Nhưng XẾP HẠNG để lấy Top X vòng hiện tại theo TỔNG ĐIỂM TOÀN CUỘC THI (total_diem)
+    Nếu không có vòng BGD trước:
+      - Fallback: lấy tổng điểm các vòng KHÔNG phải BGD
     """
     if not (ct and vt_bgd and vt_bgd.bgd_top_limit):
         return []
 
-    # Tìm vòng BGD liền trước (ví dụ: Top 10 trước Top 5)
+    # ✅ luôn khởi tạo để tránh UnboundLocalError
+    score_rows = []
+
     prev_bgd_round = (
         VongThi.objects.filter(cuocThi=ct, is_bgd_round=True, id__lt=vt_bgd.id)
         .order_by("-id")
         .first()
     )
 
-    # Tìm vòng đặc biệt gần nhất trước vòng BGD hiện tại
     prev_special_round = (
         VongThi.objects.filter(cuocThi=ct, is_special_bonus_round=True, id__lt=vt_bgd.id)
         .order_by("-id")
         .first()
     )
 
-
     if prev_bgd_round:
-        # Dựa trên điểm BGD vòng trước + tổng điểm + tổng thời gian
         annotate_kwargs = dict(
             prev_bgd_score=Sum("diem", filter=Q(vongThi=prev_bgd_round)),
             total_diem=Sum("diem"),
@@ -68,18 +64,20 @@ def _select_bgd_contestants(ct, vt_bgd):
             PhieuChamDiem.objects.filter(cuocThi=ct)
             .values("thiSinh")
             .annotate(**annotate_kwargs)
-            .filter(prev_bgd_score__gt=0)
+            .filter(prev_bgd_score__gt=0)  # ✅ lọc nhóm Top10 (đã có điểm ở vòng BGD trước)
         )
 
         if prev_special_round:
             qs = qs.filter(special_score__gt=0)
 
-        score_rows = qs.order_by(
-            "-prev_bgd_score",
-            "-total_diem",
-            "total_time",
-            "thiSinh",
-        )[:vt_bgd.bgd_top_limit]
+        # ✅ FIX theo yêu cầu: lấy Top theo tổng điểm, KHÔNG theo điểm vòng Top10
+        score_rows = list(
+            qs.order_by(
+                "-total_diem",
+                "total_time",
+                "thiSinh",
+            )[: vt_bgd.bgd_top_limit]
+        )
 
     else:
         annotate_kwargs = dict(
@@ -101,19 +99,23 @@ def _select_bgd_contestants(ct, vt_bgd):
         if prev_special_round:
             qs = qs.filter(special_score__gt=0)
 
-        score_rows = qs.order_by(
-            "-total_diem",
-            "total_time",
-            "thiSinh",
-        )[:vt_bgd.bgd_top_limit]
+        score_rows = list(
+            qs.order_by(
+                "-total_diem",
+                "total_time",
+                "thiSinh",
+            )[: vt_bgd.bgd_top_limit]
+        )
 
+    # ✅ nếu không có dữ liệu thì return luôn (tránh lỗi phía dưới)
+    if not score_rows:
+        return []
 
     ts_ids = [row["thiSinh"] for row in score_rows]
     contestants = list(ThiSinh.objects.filter(pk__in=ts_ids))
     order_map = {ts_id: idx for idx, ts_id in enumerate(ts_ids)}
     contestants.sort(key=lambda ts: order_map.get(ts.pk, 0))
     return contestants
-
 
 def _auto_login_bgd_as_judge(request, bgd):
     """
