@@ -219,21 +219,37 @@ def organize_view(request, ct_id=None):
                     tid = r["thiSinh_id"]
                     total_by_id[tid] = total_by_id.get(tid, 0.0) + float(r["avg"] or 0.0)
 
-                time_qs = (
+                time_bt_qs = (
                     PhieuChamDiem.objects
                     .filter(cuocThi=vt.cuocThi)
                     .exclude(vongThi__is_special_bonus_round=True)
-                    .values("thiSinh_id")
+                    .values("thiSinh_id", "baiThi_id")
                     .annotate(min_time=Min("thoiGian"))
                 )
-                min_time_by_id = {r["thiSinh_id"]: r["min_time"] for r in time_qs}
+
+                total_time_by_id = {}
+                has_time_by_id = {}
+                for r in time_bt_qs:
+                    tid = r["thiSinh_id"]
+                    sec = r["min_time"]
+                    if sec is None:
+                        continue
+                    total_time_by_id[tid] = total_time_by_id.get(tid, 0) + int(sec)
+                    has_time_by_id[tid] = True
 
                 ranked = [
-                    {"thiSinh": tid, "total_diem": total, "min_time": min_time_by_id.get(tid)}
+                    {
+                        "thiSinh": tid,
+                        "total_diem": total,
+                        "total_time_sec": (total_time_by_id.get(tid) if has_time_by_id.get(tid) else None),
+                    }
                     for tid, total in total_by_id.items()
                 ]
-                ranked.sort(key=lambda x: (-x["total_diem"], x["min_time"] is None, x["min_time"], x["thiSinh"]))
+                ranked.sort(
+                    key=lambda x: (-x["total_diem"], x["total_time_sec"] is None, x["total_time_sec"], x["thiSinh"])
+                )
                 s_ids = [r["thiSinh"] for r in ranked[:20]]
+
 
                 if len(s_ids) < 2:
                     messages.error(request, "Không đủ thí sinh để chia cặp.")
