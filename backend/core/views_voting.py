@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import transaction
-
+from django.db.models import Count, Q
 from core.models import ThiSinh, CuocThi, ThiSinhVoting, VotingRecord
 
 ALLOWED_VOTER_DOMAINS = {"fpt.com", "fpt.net", "vienthongtin.com"}
@@ -36,16 +36,27 @@ def voting_home_view(request):
     else:
         ct = CuocThi.objects.filter(trangThai=True).order_by("id").first()
 
-    # Danh sách ứng viên (giữ nguyên)
+    # Danh sách ứng viên + tổng phiếu vote
+    base_qs = ThiSinhVoting.objects.select_related("thiSinh", "cuocThi")
+
     if ct:
-        candidates_qs = (ThiSinhVoting.objects
-                         .select_related("thiSinh", "cuocThi")
-                         .filter(cuocThi=ct)
-                         .order_by("thiSinh__maNV"))
+        candidates_qs = (
+            base_qs
+            .filter(cuocThi=ct)
+            .annotate(
+                total_votes=Count(
+                    "thiSinh__votingrecord",
+                    filter=Q(thiSinh__votingrecord__cuocThi=ct),
+                )
+            )
+            .order_by("thiSinh__maNV")
+        )
     else:
-        candidates_qs = (ThiSinhVoting.objects
-                         .select_related("thiSinh", "cuocThi")
-                         .order_by("thiSinh__maNV"))
+        candidates_qs = (
+            base_qs
+            .annotate(total_votes=Count("thiSinh__votingrecord"))
+            .order_by("thiSinh__maNV")
+        )
 
     existing = VotingRecord.objects.filter(voter_email=email).first() if email else None
 
@@ -59,6 +70,7 @@ def voting_home_view(request):
             "image_url": ts.display_image_url,
             "ct_ma": cv.cuocThi.ma,
             "ct_id": cv.cuocThi.id,
+            "total_votes": getattr(cv, "total_votes", 0) or 0,
         })
 
     ctx = {

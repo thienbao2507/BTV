@@ -59,6 +59,11 @@
           <div class="text-lg font-semibold leading-tight">{{ c.hoTen }}</div>
           <div class="text-sm opacity-80">Mã NV: <b class="tabular-nums">{{ c.maNV }}</b></div>
           <div class="text-sm opacity-80">Đơn vị: {{ c.donVi }}</div>
+          <div class="mt-1 text-sm opacity-90 flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-semibold">
+              🗳 {{ c.total_votes }} phiếu
+            </span>
+          </div>
           <button
             class="vote-btn mt-3 w-full px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50"
             data-manv="{{ c.maNV }}" data-ct="{{ c.ct_id }}"
@@ -220,6 +225,18 @@ function renderBannerSuccess(name, maNV){
       if (resp.ok && resp.data && resp.data.ok){
         renderBannerSuccess(resp.data.hoTen || pending.name, resp.data.maNV || pending.maNV);
         $$(".vote-btn").forEach(function(b){ b.disabled = true; });
+
+        // ✅ Tăng số vote ngay trên card (không reload)
+        var votedMa = (resp.data && resp.data.maNV) ? resp.data.maNV : pending.maNV;
+        var badgeCountNode = document.querySelector(
+          '[data-votes-for="' + votedMa + '"] .vote-count'
+        );
+        if (badgeCountNode){
+          var cur = parseInt((badgeCountNode.textContent || "0").replace(/[^\d]/g, ''), 10);
+          if (isNaN(cur)) cur = 0;
+          badgeCountNode.textContent = String(cur + 1);
+        }
+
       } else if (resp.status === 401){
         var next = encodeURIComponent(location.pathname + location.search);
         location.href = "/login?next=" + next;
@@ -230,6 +247,7 @@ function renderBannerSuccess(name, maNV){
           $$(".vote-btn").forEach(function(b){ b.disabled = true; });
         }
       }
+
     })
     .catch(function(){ renderBannerError("Có lỗi kết nối. Vui lòng thử lại."); })
     .finally(function(){

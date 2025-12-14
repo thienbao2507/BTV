@@ -96,7 +96,7 @@ class BaiThiAdmin(admin.ModelAdmin):
 @admin.register(PhieuChamDiem)
 class PhieuChamDiemAdmin(admin.ModelAdmin):
     list_display = ("maPhieu", "thiSinh", "giamKhao", "baiThi", "diem", "maCuocThi", "thoiGian", "updated_at")
-    search_fields = ("thiSinh__maNV", "giamKhao__maNV", "baiThi__ma", "maCuocThi")
+    search_fields = ("thiSinh__maNV", "thiSinh__hoTen", "giamKhao__maNV", "giamKhao__hoTen", "baiThi__ma", "maCuocThi")
     list_filter = ("maCuocThi", "baiThi")
     
 @admin.register(BaiThiTemplateSection)
@@ -204,10 +204,13 @@ class SpecialRoundScoreLogAdmin(admin.ModelAdmin):
     def get_thi_sinh(self, obj):
         return obj.pair_member.thiSinh
     get_thi_sinh.short_description = "Thí sinh"
-    
+    get_thi_sinh.admin_order_field = "pair_member__thiSinh__maNV"
+
     def get_pair_label(self, obj):
         return f"Cặp {obj.pair_member.pair_id}"
     get_pair_label.short_description = "Cặp"
+    get_pair_label.admin_order_field = "pair_member__pair_id"
+
 
 
 @admin.register(BGDScore)

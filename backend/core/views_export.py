@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg, Max
+from decimal import Decimal, ROUND_HALF_UP
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side  # <- thêm Border, Side
 from .models import CuocThi, VongThi, BaiThi, ThiSinh, PhieuChamDiem
 from .models import SpecialRoundPairMember
@@ -178,7 +179,7 @@ def _flatten(ct: CuocThi):
         for bt_id in bt_ids_in_order:
             sc = score_map.get((ts.maNV, bt_id), "")
             row.append(sc)
-            if isinstance(sc, (int, float)):
+            if isinstance(sc, (int, float, Decimal)):
                 total_score += float(sc)
 
             tm_seconds = time_map.get((ts.maNV, bt_id))
@@ -188,22 +189,33 @@ def _flatten(ct: CuocThi):
                 total_time_sec += tm_seconds
 
         # Cột Tổng
-        row.append(total_score)
+        row.append(
+            int(Decimal(total_score).quantize(0, rounding=ROUND_HALF_UP))
+        )
+
         # Cột Tổng thời gian
         row.append(_fmt_mmss(total_time_sec) if has_any_time else "")
 
         # ==== Tính tổng điểm ở các bài "vòng đặc biệt" để suy ra group ====
+        # ==== Tính nhóm vòng đặc biệt: Winner(2) > Loser(1) > NoScore(0) ====
         sp_total = 0.0
+        sp_has_score = False
+
         if ts.maNV in special_members_ma and bt_special_ids:
             for bt_id in bt_special_ids:
                 sc_sp = score_map.get((ts.maNV, bt_id), "")
-                if isinstance(sc_sp, (int, float)):
+                if isinstance(sc_sp, (int, float, Decimal)):
+                    sp_has_score = True
                     sp_total += float(sc_sp)
 
         if special_sort_active and (ts.maNV in special_members_ma):
-            special_group = 1
+            if sp_has_score:
+                special_group = 2 if sp_total > 0 else 1
+            else:
+                special_group = 0
         else:
             special_group = 0
+
 
 
         data.append({
@@ -491,19 +503,19 @@ def _final_columns_and_rows(ct: CuocThi):
     for ts in ts_qs:
         # Đối kháng
         sao = stars_by_ma.get(ts.maNV, None)
-        sao_fmt = (f"{sao:.1f}" if sao is not None else "")
-        sao_val = float(sao or 0.0)
+        sao_fmt = (str(int(Decimal(str(sao)).quantize(0, rounding=ROUND_HALF_UP))) if sao is not None else "")
+        sao_val = int(Decimal(str(sao or 0)).quantize(0, rounding=ROUND_HALF_UP))
 
         # Tim
         tim = hearts_by_ma.get(ts.maNV, 0)
 
         # Soán ngôi (AVG điểm BGD)
         soan = soan_by_ma.get(ts.maNV, None)
-        soan_fmt = (f"{soan:.2f}" if soan is not None else "")
-        soan_val = float(soan or 0.0)
+        soan_fmt = (str(int(Decimal(str(soan)).quantize(0, rounding=ROUND_HALF_UP))) if soan is not None else "")
+        soan_val = int(Decimal(str(soan or 0)).quantize(0, rounding=ROUND_HALF_UP))
 
         # Tổng điểm hiển thị = Soán ngôi + Đối kháng
-        total_display = round(soan_val + sao_val, 2)
+        total_display = int(Decimal(soan_val + sao_val).quantize(0, rounding=ROUND_HALF_UP))
 
         data.append({
             "ts": ts,
@@ -521,8 +533,8 @@ def _final_columns_and_rows(ct: CuocThi):
     # 3) Cuối cùng sort theo Mã NV cho ổn định
     data.sort(
         key=lambda d: (
-            -d["total"],
-            -d["tim"],
+            -int(d["total"]),
+            -int(d["tim"]),
             _sv(getattr(d["ts"], "maNV", "")),
         )
     )
