@@ -214,21 +214,24 @@ def organize_view(request, ct_id=None):
                     messages.error(request, "Không tìm thấy vòng trước để lấy Top 20.")
                     return redirect(request.path)
 
-                # Lấy điểm vòng trước từ PhieuChamDiem
-                from django.db.models import Sum, Min
+                # Lấy TOP 20 dựa trên tổng điểm và TỔNG thời gian (tie-break).
+                # Lưu ý: trước đây dùng Min(thoiGian) nên có thể làm lệch thứ hạng cuối bảng
+                # (ví dụ top 19/top 20 bị đảo), dẫn tới ghép cặp nhìn như bị lệch 1 bậc.
+                from django.db.models import Sum
 
-                score_data = (
+                score_qs = (
                     PhieuChamDiem.objects
-                    .filter(vongThi=prev_round)
+                    .filter(cuocThi=vt.cuocThi, vongThi=prev_round)
                     .values("thiSinh")
                     .annotate(
                         total_diem=Sum("diem"),
-                        min_time=Min("thoiGian")
+                        total_time=Sum("thoiGian"),
                     )
-                    .order_by("-total_diem", "min_time", "thiSinh")[:20]
+                    .order_by("-total_diem", "total_time", "thiSinh")[:20]
                 )
+                score_rows = list(score_qs)
 
-                if score_data.count() < 2:
+                if len(score_rows) < 2:
                     messages.error(request, "Không đủ thí sinh để chia cặp.")
                     return redirect(request.path)
 
@@ -236,23 +239,27 @@ def organize_view(request, ct_id=None):
                 SpecialRoundPairMember.objects.filter(pair__vongThi=vt).delete()
                 SpecialRoundPair.objects.filter(vongThi=vt).delete()
 
-                # Tạo cặp mới
-                s_ids = list(score_data.values_list("thiSinh", flat=True))
+                # Danh sách thí sinh theo thứ hạng (1..20)
+                s_ids = [r["thiSinh"] for r in score_rows]
                 n = len(s_ids)
-                pair_count = n // 2
+                if n < 20:
+                    # Không chặn hẳn, nhưng báo để bạn biết vì sao có thể không đủ 10 cặp
+                    messages.warning(request, f"Chỉ lấy được Top {n} (có thể vòng trước chưa có đủ phiếu chấm cho 20 thí sinh).")
 
+                # Tạo cặp: 1-20, 2-19, ... (zip với danh sách đảo ngược)
+                pair_count = n // 2
                 pairs_created = 0
+
                 for i in range(pair_count):
                     left_id = s_ids[i]
                     right_id = s_ids[-(i + 1)]
 
-                    # Tạo cặp đặc biệt mới
                     pair = SpecialRoundPair.objects.create(
                         cuocThi=vt.cuocThi,
                         vongThi=vt,
                     )
 
-                    # Tạo 2 member
+                    # Slot hiện đang unique theo (pair, slot) nên giữ 1/2 để không đụng unique_together
                     SpecialRoundPairMember.objects.create(
                         pair=pair,
                         thiSinh_id=left_id,
@@ -270,7 +277,7 @@ def organize_view(request, ct_id=None):
 
                 messages.success(
                     request,
-                    f"Đã tạo {pairs_created} cặp đặc biệt từ Top 20 vòng {prev_round.tenVongThi}."
+                    f"Đã tạo {pairs_created} cặp đặc biệt từ Top {min(n, 20)} vòng {prev_round.tenVongThi}."
                 )
                 return redirect(request.path)
             # --------------------------------------------------

@@ -176,11 +176,7 @@ def _make_bgd_single_qr_image(bgd, request, ct, vt):
 
     # URL chấm điểm của BGD cho vòng thi này
     target_url = request.build_absolute_uri(
-<<<<<<< HEAD
-        reverse("bgd-go-stars", args=[ct.id, vt.id, bgd.token])
-=======
         reverse(view_name, args=[ct.id, vt.id, bgd.token])
->>>>>>> main
     )
 
     qr = qrcode.QRCode(
