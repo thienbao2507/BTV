@@ -1,32 +1,33 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponseBadRequest
 from django.db import transaction
 from django.db.models import Count, Q
+
 from core.models import ThiSinh, CuocThi, ThiSinhVoting, VotingRecord
 
 ALLOWED_VOTER_DOMAINS = {"fpt.com", "fpt.net", "vienthongtin.com"}
 
+
 def _login_email(request) -> str:
-    # Ưu tiên judge_email, sau đó đến auth_email (người dùng thường)
-    email = (request.session.get("judge_email")
-             or request.session.get("auth_email")
-             or "").strip().lower()
+    email = (
+        request.session.get("judge_email")
+        or request.session.get("auth_email")
+        or ""
+    ).strip().lower()
     return email
+
 
 def _is_allowed_voter_email(email: str) -> bool:
     if "@" not in email:
         return False
     return email.split("@", 1)[1].lower() in ALLOWED_VOTER_DOMAINS
 
+
 def voting_home_view(request):
     email = _login_email(request)
 
-    # KHÔNG redirect khi chưa đăng nhập -> cho phép xem tự do
-    # if not email:
-    #     return redirect(f"/login?next={request.path}")
-
-    # Chọn cuộc thi (giữ nguyên)
+    # Chọn cuộc thi
     ct_id = request.GET.get("ct")
     if ct_id:
         try:
@@ -36,7 +37,6 @@ def voting_home_view(request):
     else:
         ct = CuocThi.objects.filter(trangThai=True).order_by("id").first()
 
-    # Danh sách ứng viên + tổng phiếu vote
     base_qs = ThiSinhVoting.objects.select_related("thiSinh", "cuocThi")
 
     if ct:
@@ -63,6 +63,7 @@ def voting_home_view(request):
     candidates = []
     for cv in candidates_qs:
         ts = cv.thiSinh
+        votes = int(getattr(cv, "total_votes", 0) or 0)
         candidates.append({
             "maNV": ts.maNV,
             "hoTen": ts.hoTen,
@@ -70,14 +71,21 @@ def voting_home_view(request):
             "image_url": ts.display_image_url,
             "ct_ma": cv.cuocThi.ma,
             "ct_id": cv.cuocThi.id,
-            "total_votes": getattr(cv, "total_votes", 0) or 0,
+            "total_votes": votes,   # vẫn giữ để tính %, nhưng template sẽ không hiển thị "x phiếu"
         })
+
+    total_votes_all = sum(c["total_votes"] for c in candidates)
+    for c in candidates:
+        v = c["total_votes"]
+        c["vote_percent"] = (v * 100.0 / total_votes_all) if total_votes_all > 0 else 0.0
 
     ctx = {
         "login_email": email or "",
-        "can_vote": bool(request.session.get("can_vote")) if email else False,
+        # dùng cùng logic với API submit để khỏi lệ thuộc session can_vote
+        "can_vote": _is_allowed_voter_email(email) if email else False,
         "contest": ct,
         "candidates": candidates,
+        "total_votes_all": total_votes_all,
         "already_voted": bool(existing),
         "voted_target": {
             "maNV": existing.thiSinh_ma,
@@ -86,13 +94,13 @@ def voting_home_view(request):
     }
     return render(request, "voting/index.html", ctx)
 
+
 @require_POST
 def voting_submit_api(request):
     email = _login_email(request)
     if not email:
         return JsonResponse({"ok": False, "error": "NOT_LOGGED_IN"}, status=401)
 
-    # Chỉ cho phép domain hợp lệ
     if not _is_allowed_voter_email(email):
         return JsonResponse({"ok": False, "error": "EMAIL_DOMAIN_NOT_ALLOWED"}, status=403)
 
@@ -133,13 +141,53 @@ def voting_submit_api(request):
             thiSinh_ten=ts.hoTen,
             count=1,
         )
-    return JsonResponse({"ok": True, "maNV": rec.thiSinh_ma, "hoTen": rec.thiSinh_ten})
+
+    # Trả thêm tổng phiếu & phiếu của candidate để JS cập nhật %
+    base = VotingRecord.objects.all()
+    if ct:
+        base = base.filter(cuocThi=ct)
+
+    total_votes_all = base.count()
+    candidate_votes = base.filter(thiSinh=ts).count()
+    candidate_percent = (candidate_votes * 100.0 / total_votes_all) if total_votes_all > 0 else 0.0
+
+    return JsonResponse({
+        "ok": True,
+        "maNV": rec.thiSinh_ma,
+        "hoTen": rec.thiSinh_ten,
+        "total_votes_all": total_votes_all,
+        "candidate_votes": candidate_votes,
+        "candidate_percent": candidate_percent,
+    })
+
+
 @require_POST
 def voting_revoke_api(request):
     email = _login_email(request)
     if not email:
         return JsonResponse({"ok": False, "error": "NOT_LOGGED_IN"}, status=401)
 
-    # Hủy mọi bản ghi vote của email này (toàn cục)
+    # Lưu lại target trước khi xoá để trả về cho JS
+    rec = VotingRecord.objects.filter(voter_email=email).select_related("cuocThi", "thiSinh").first()
+    revoked_ma = rec.thiSinh_ma if rec else None
+    revoked_ct = rec.cuocThi if rec else None
+    revoked_ts = rec.thiSinh if rec else None
+
     deleted_count, _ = VotingRecord.objects.filter(voter_email=email).delete()
-    return JsonResponse({"ok": True, "deleted": deleted_count})
+
+    base = VotingRecord.objects.all()
+    if revoked_ct:
+        base = base.filter(cuocThi=revoked_ct)
+
+    total_votes_all = base.count()
+    candidate_votes = base.filter(thiSinh=revoked_ts).count() if revoked_ts else None
+    candidate_percent = (candidate_votes * 100.0 / total_votes_all) if (candidate_votes is not None and total_votes_all > 0) else 0.0
+
+    return JsonResponse({
+        "ok": True,
+        "deleted": deleted_count,
+        "revoked_maNV": revoked_ma,
+        "total_votes_all": total_votes_all,
+        "candidate_votes": candidate_votes,
+        "candidate_percent": candidate_percent,
+    })

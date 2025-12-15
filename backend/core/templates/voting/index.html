@@ -23,26 +23,28 @@
         <button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>
       </div>
     {% elif already_voted and voted_target %}
-  <div class="rounded-xl px-4 py-3 flex items-center gap-3 border bg-emerald-500/20 border-emerald-500/40" role="alert">
-    <div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>
-    <div class="flex-1">
-      Bạn đã vote cho: <b>{{ voted_target.hoTen }}</b> —
-      <span class="text-emerald-300 tabular-nums">{{ voted_target.maNV }}</span>. Mỗi email chỉ được vote 1 lần.
-      <!-- Nút Bỏ vote đặt CUỐI CÂU -->
-      <button id="unvoteBtnSSR" type="button"
-              class="inline-flex items-center align-baseline ml-3 px-3 py-1 rounded-lg border border-emerald-400/50 hover:bg-emerald-400/10 text-emerald-200">
-        Bỏ vote
-      </button>
-    </div>
-    <button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>
-  </div>
+      <div class="rounded-xl px-4 py-3 flex items-center gap-3 border bg-emerald-500/20 border-emerald-500/40" role="alert">
+        <div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>
+        <div class="flex-1">
+          Bạn đã vote cho: <b>{{ voted_target.hoTen }}</b> —
+          <span class="text-emerald-300 tabular-nums">{{ voted_target.maNV }}</span>. Mỗi email chỉ được vote 1 lần.
+          <button id="unvoteBtnSSR" type="button"
+                  class="inline-flex items-center align-baseline ml-3 px-3 py-1 rounded-lg border border-emerald-400/50 hover:bg-emerald-400/10 text-emerald-200">
+            Bỏ vote
+          </button>
+        </div>
+        <button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>
+      </div>
     {% endif %}
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+  {# 2 hàng × 5 cột cho 10 người ở md+ #}
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
     {% for c in candidates %}
-      <div class="glass rounded-2xl overflow-hidden">
-        <div class="aspect-[3/4] bg-black/20">
+      <div class="glass rounded-2xl overflow-hidden"
+           data-votes-for="{{ c.maNV }}"
+           data-votes="{{ c.total_votes }}">
+        <div class="aspect-[4/5] bg-black/20">
           {% if c.image_url %}
             <img
               src="{{ c.image_url }}"
@@ -55,18 +57,23 @@
             <div class="w-full h-full flex items-center justify-center text-white/60">No image</div>
           {% endif %}
         </div>
-        <div class="p-4">
-          <div class="text-lg font-semibold leading-tight">{{ c.hoTen }}</div>
-          <div class="text-sm opacity-80">Mã NV: <b class="tabular-nums">{{ c.maNV }}</b></div>
-          <div class="text-sm opacity-80">Đơn vị: {{ c.donVi }}</div>
-          <div class="mt-1 text-sm opacity-90 flex items-center gap-2">
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-xs font-semibold">
-              🗳 {{ c.total_votes }} phiếu
+
+        <div class="p-3">
+          <div class="text-base font-semibold leading-tight">{{ c.hoTen }}</div>
+          <div class="text-xs opacity-80">Mã NV: <b class="tabular-nums">{{ c.maNV }}</b></div>
+          <div class="text-xs opacity-80 truncate">Đơn vị: {{ c.donVi }}</div>
+
+          <div class="mt-1 text-xs opacity-90 flex items-center gap-2">
+            <span class="vote-percent inline-flex items-center px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[11px] font-semibold">
+              🗳 {{ c.vote_percent|floatformat:-1 }}%
             </span>
           </div>
+
           <button
-            class="vote-btn mt-3 w-full px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50"
-            data-manv="{{ c.maNV }}" data-ct="{{ c.ct_id }}"
+            class="vote-btn mt-2 w-full px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-sm"
+            data-manv="{{ c.maNV }}"
+            data-name="{{ c.hoTen }}"
+            data-ct="{{ c.ct_id }}"
             {% if already_voted %}disabled{% endif %}>
             Vote
           </button>
@@ -81,7 +88,8 @@
 <!-- Flags để JS đọc -->
 <div id="vote-flags"
      data-login-email="{{ login_email|default:'' }}"
-     data-can-vote="{{ can_vote|yesno:'true,false' }}">
+     data-can-vote="{{ can_vote|yesno:'true,false' }}"
+     data-total-votes="{{ total_votes_all|default:0 }}">
 </div>
 
 <!-- Modal xác nhận -->
@@ -108,6 +116,8 @@
   var flagNode    = document.getElementById("vote-flags");
   var LOGIN_EMAIL = flagNode ? flagNode.getAttribute("data-login-email") : "";
   var CAN_VOTE    = (flagNode ? flagNode.getAttribute("data-can-vote") : "false") === "true";
+  var TOTAL_ALL   = parseInt(flagNode ? (flagNode.getAttribute("data-total-votes") || "0") : "0", 10);
+  if (isNaN(TOTAL_ALL)) TOTAL_ALL = 0;
 
   // CSRF
   function getCookie(name){
@@ -117,23 +127,41 @@
     return null;
   }
 
-function renderBannerSuccess(name, maNV){
-  var host = $("#bannerHost");
-  host.innerHTML =
-    '<div class="rounded-xl px-4 py-3 flex items-center gap-3 border bg-emerald-500/20 border-emerald-500/40" role="alert">'
-      + '<div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>'
-      + '<div class="flex-1">'
-        + 'Bạn đã vote cho: <b>' + name + '</b> — '
-        + '<span class="text-emerald-300 tabular-nums">' + maNV + '</span>. Mỗi email chỉ được vote 1 lần.'
-        + '<button id="unvoteBtn" type="button" '
-          + 'class="inline-flex items-center align-baseline ml-3 px-3 py-1 rounded-lg border border-emerald-400/50 hover:bg-emerald-400/10 text-emerald-200">'
-          + 'Bỏ vote'
-        + '</button>'
-      + '</div>'
-      + '<button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>'
-    + '</div>';
-  bindUnvote($("#unvoteBtn"));
-}
+  function fmtPct(x){
+    if (!isFinite(x)) return "0%";
+    var s = x.toFixed(1);
+    if (s.endsWith(".0")) s = s.slice(0, -2);
+    return s + "%";
+  }
+
+  function recalcPercents(){
+    var total = TOTAL_ALL;
+    document.querySelectorAll("[data-votes-for]").forEach(function(card){
+      var v = parseInt(card.getAttribute("data-votes") || "0", 10);
+      if (isNaN(v)) v = 0;
+      var pct = total > 0 ? (v * 100.0 / total) : 0.0;
+      var node = card.querySelector(".vote-percent");
+      if (node) node.textContent = "🗳 " + fmtPct(pct);
+    });
+  }
+
+  function renderBannerSuccess(name, maNV){
+    var host = $("#bannerHost");
+    host.innerHTML =
+      '<div class="rounded-xl px-4 py-3 flex items-center gap-3 border bg-emerald-500/20 border-emerald-500/40" role="alert">'
+        + '<div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>'
+        + '<div class="flex-1">'
+          + 'Bạn đã vote cho: <b>' + name + '</b> — '
+          + '<span class="text-emerald-300 tabular-nums">' + maNV + '</span>. Mỗi email chỉ được vote 1 lần.'
+          + '<button id="unvoteBtn" type="button" '
+            + 'class="inline-flex items-center align-baseline ml-3 px-3 py-1 rounded-lg border border-emerald-400/50 hover:bg-emerald-400/10 text-emerald-200">'
+            + 'Bỏ vote'
+          + '</button>'
+        + '</div>'
+        + '<button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>'
+      + '</div>';
+    bindUnvote($("#unvoteBtn"));
+  }
 
   function renderBannerError(message){
     var host = $("#bannerHost");
@@ -144,6 +172,7 @@ function renderBannerSuccess(name, maNV){
         + '<button type="button" class="ml-2 text-white/70 hover:text-white" onclick="this.parentElement.remove()">✕</button>'
       + '</div>';
   }
+
   function renderBannerNotice(message){
     var host = $("#bannerHost");
     host.innerHTML =
@@ -180,7 +209,7 @@ function renderBannerSuccess(name, maNV){
 
   // Bind vote
   $$(".vote-btn").forEach(function(btn){
-    btn.addEventListener("click", function(e){
+    btn.addEventListener("click", function(){
       if (btn.disabled) return;
       if (!LOGIN_EMAIL){
         var next = encodeURIComponent(location.pathname + location.search);
@@ -191,10 +220,9 @@ function renderBannerSuccess(name, maNV){
         renderBannerError("Email của bạn không thuộc domain được phép vote.");
         return;
       }
-      var card  = e.currentTarget.closest(".glass");
-      var name  = $(".text-lg", card).textContent.trim();
-      var maNV  = e.currentTarget.dataset.manv;
-      var ct_id = e.currentTarget.dataset.ct || "";
+      var maNV  = btn.dataset.manv;
+      var name  = btn.dataset.name || "";
+      var ct_id = btn.dataset.ct || "";
       openModal(maNV, name, ct_id);
     });
   });
@@ -223,31 +251,36 @@ function renderBannerSuccess(name, maNV){
     })
     .then(function(resp){
       if (resp.ok && resp.data && resp.data.ok){
-        renderBannerSuccess(resp.data.hoTen || pending.name, resp.data.maNV || pending.maNV);
+        var votedMa = resp.data.maNV || pending.maNV;
+        renderBannerSuccess(resp.data.hoTen || pending.name, votedMa);
         $$(".vote-btn").forEach(function(b){ b.disabled = true; });
 
-        // ✅ Tăng số vote ngay trên card (không reload)
-        var votedMa = (resp.data && resp.data.maNV) ? resp.data.maNV : pending.maNV;
-        var badgeCountNode = document.querySelector(
-          '[data-votes-for="' + votedMa + '"] .vote-count'
-        );
-        if (badgeCountNode){
-          var cur = parseInt((badgeCountNode.textContent || "0").replace(/[^\d]/g, ''), 10);
-          if (isNaN(cur)) cur = 0;
-          badgeCountNode.textContent = String(cur + 1);
+        // cập nhật total + votes của candidate, rồi tính lại %
+        var newTotal = (typeof resp.data.total_votes_all === "number") ? resp.data.total_votes_all : (TOTAL_ALL + 1);
+        TOTAL_ALL = Math.max(0, parseInt(newTotal, 10) || 0);
+        if (flagNode) flagNode.setAttribute("data-total-votes", String(TOTAL_ALL));
+
+        var card = document.querySelector('[data-votes-for="' + votedMa + '"]');
+        if (card){
+          var newVotes = (typeof resp.data.candidate_votes === "number")
+            ? resp.data.candidate_votes
+            : ((parseInt(card.getAttribute("data-votes") || "0", 10) || 0) + 1);
+          card.setAttribute("data-votes", String(Math.max(0, parseInt(newVotes, 10) || 0)));
         }
+        recalcPercents();
 
       } else if (resp.status === 401){
         var next = encodeURIComponent(location.pathname + location.search);
         location.href = "/login?next=" + next;
       } else {
-        var msg = (resp.data && resp.data.error) ? resp.data.error : ("Không thể ghi nhận vote (HTTP " + resp.status + "). Vui lòng thử lại.");
+        var msg = (resp.data && resp.data.error)
+          ? resp.data.error
+          : ("Không thể ghi nhận vote (HTTP " + resp.status + "). Vui lòng thử lại.");
         renderBannerError(msg);
-        if (resp.data && resp.data.code === "ALREADY_VOTED"){
+        if (resp.data && resp.data.error === "ALREADY_VOTED"){
           $$(".vote-btn").forEach(function(b){ b.disabled = true; });
         }
       }
-
     })
     .catch(function(){ renderBannerError("Có lỗi kết nối. Vui lòng thử lại."); })
     .finally(function(){
@@ -278,15 +311,35 @@ function renderBannerSuccess(name, maNV){
                  .then(function(j){ return { ok: r.ok, status: r.status, data: j }; });
       })
       .then(function(resp){
-        if (resp.ok){
-          // Mở khóa lại tất cả nút vote
+        if (resp.ok && resp.data && resp.data.ok){
           $$(".vote-btn").forEach(function(b){ b.disabled = false; });
           renderBannerNotice("Đã bỏ vote. Bạn có thể chọn lại thí sinh khác.");
+
+          if ((resp.data.deleted || 0) > 0){
+            var newTotal = (typeof resp.data.total_votes_all === "number") ? resp.data.total_votes_all : (TOTAL_ALL - 1);
+            TOTAL_ALL = Math.max(0, parseInt(newTotal, 10) || 0);
+            if (flagNode) flagNode.setAttribute("data-total-votes", String(TOTAL_ALL));
+
+            var revokedMa = resp.data.revoked_maNV;
+            if (revokedMa){
+              var card = document.querySelector('[data-votes-for="' + revokedMa + '"]');
+              if (card){
+                var newVotes = (typeof resp.data.candidate_votes === "number")
+                  ? resp.data.candidate_votes
+                  : ((parseInt(card.getAttribute("data-votes") || "0", 10) || 0) - 1);
+                card.setAttribute("data-votes", String(Math.max(0, parseInt(newVotes, 10) || 0)));
+              }
+            }
+            recalcPercents();
+          }
+
         } else if (resp.status === 401){
           var next = encodeURIComponent(location.pathname + location.search);
           location.href = "/login?next=" + next;
         } else {
-          var msg = (resp.data && resp.data.error) ? resp.data.error : ("Không thể bỏ vote (HTTP " + resp.status + ").");
+          var msg = (resp.data && resp.data.error)
+            ? resp.data.error
+            : ("Không thể bỏ vote (HTTP " + resp.status + ").");
           renderBannerError(msg);
         }
       })
@@ -294,7 +347,6 @@ function renderBannerSuccess(name, maNV){
     });
   }
 
-  // Gắn cho nút Bỏ vote render từ server (nếu có)
   bindUnvote($("#unvoteBtnSSR"));
 })();
 </script>
