@@ -226,6 +226,7 @@ def organize_view(request, ct_id=None):
                     .values("thiSinh_id", "baiThi_id")
                     .annotate(min_time=Min("thoiGian"))
                 )
+                score_rows = list(score_qs)
 
                 total_time_by_id = {}
                 has_time_by_id = {}
@@ -259,21 +260,23 @@ def organize_view(request, ct_id=None):
                 SpecialRoundPair.objects.filter(vongThi=vt).delete()
 
                 n = len(s_ids)
-                pair_count = n // 2
+                if n < 20:
+                    # Không chặn hẳn, nhưng báo để bạn biết vì sao có thể không đủ 10 cặp
+                    messages.warning(request, f"Chỉ lấy được Top {n} (có thể vòng trước chưa có đủ phiếu chấm cho 20 thí sinh).")
 
 
                 pairs_created = 0
+
                 for i in range(pair_count):
                     left_id = s_ids[i]
                     right_id = s_ids[-(i + 1)]
 
-                    # Tạo cặp đặc biệt mới
                     pair = SpecialRoundPair.objects.create(
                         cuocThi=vt.cuocThi,
                         vongThi=vt,
                     )
 
-                    # Tạo 2 member
+                    # Slot hiện đang unique theo (pair, slot) nên giữ 1/2 để không đụng unique_together
                     SpecialRoundPairMember.objects.create(
                         pair=pair,
                         thiSinh_id=left_id,
