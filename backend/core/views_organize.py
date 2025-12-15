@@ -5,7 +5,7 @@ from django.db.models import Prefetch
 from django.http import JsonResponse, QueryDict
 import json
 from .models import CuocThi, VongThi, BaiThi, BaiThiTimeRule, BaiThiTemplateSection, BaiThiTemplateItem, GiamKhao, GiamKhaoBaiThi
-
+from django.db.models import Avg, Min
 from .models import (
     CuocThi,
     VongThi,
@@ -204,50 +204,67 @@ def organize_view(request, ct_id=None):
                     return redirect(request.path)
 
                 # Tìm vòng trước trong cùng Cuộc Thi
-                prev_round = (
-                    VongThi.objects
-                    .filter(cuocThi=vt.cuocThi, id__lt=vt.id)
-                    .order_by("-id")
-                    .first()
-                )
-                if not prev_round:
-                    messages.error(request, "Không tìm thấy vòng trước để lấy Top 20.")
-                    return redirect(request.path)
 
-                # Lấy TOP 20 dựa trên tổng điểm và TỔNG thời gian (tie-break).
-                # Lưu ý: trước đây dùng Min(thoiGian) nên có thể làm lệch thứ hạng cuối bảng
-                # (ví dụ top 19/top 20 bị đảo), dẫn tới ghép cặp nhìn như bị lệch 1 bậc.
-                from django.db.models import Sum
 
                 score_qs = (
                     PhieuChamDiem.objects
-                    .filter(cuocThi=vt.cuocThi, vongThi=prev_round)
-                    .values("thiSinh")
-                    .annotate(
-                        total_diem=Sum("diem"),
-                        total_time=Sum("thoiGian"),
-                    )
-                    .order_by("-total_diem", "total_time", "thiSinh")[:20]
+                    .filter(cuocThi=vt.cuocThi)
+                    .exclude(vongThi__is_special_bonus_round=True)
+                    .values("thiSinh_id", "baiThi_id")
+                    .annotate(avg=Avg("diem"))
+                )
+
+                total_by_id = {}
+                for r in score_qs:
+                    tid = r["thiSinh_id"]
+                    total_by_id[tid] = total_by_id.get(tid, 0.0) + float(r["avg"] or 0.0)
+
+                time_bt_qs = (
+                    PhieuChamDiem.objects
+                    .filter(cuocThi=vt.cuocThi)
+                    .exclude(vongThi__is_special_bonus_round=True)
+                    .values("thiSinh_id", "baiThi_id")
+                    .annotate(min_time=Min("thoiGian"))
                 )
                 score_rows = list(score_qs)
 
-                if len(score_rows) < 2:
+                total_time_by_id = {}
+                has_time_by_id = {}
+                for r in time_bt_qs:
+                    tid = r["thiSinh_id"]
+                    sec = r["min_time"]
+                    if sec is None:
+                        continue
+                    total_time_by_id[tid] = total_time_by_id.get(tid, 0) + int(sec)
+                    has_time_by_id[tid] = True
+
+                ranked = [
+                    {
+                        "thiSinh": tid,
+                        "total_diem": total,
+                        "total_time_sec": (total_time_by_id.get(tid) if has_time_by_id.get(tid) else None),
+                    }
+                    for tid, total in total_by_id.items()
+                ]
+                ranked.sort(
+                    key=lambda x: (-x["total_diem"], x["total_time_sec"] is None, x["total_time_sec"], x["thiSinh"])
+                )
+                s_ids = [r["thiSinh"] for r in ranked[:20]]
+
+
+                if len(s_ids) < 2:
                     messages.error(request, "Không đủ thí sinh để chia cặp.")
                     return redirect(request.path)
 
-                # Xóa cặp đặc biệt cũ (nếu có)
                 SpecialRoundPairMember.objects.filter(pair__vongThi=vt).delete()
                 SpecialRoundPair.objects.filter(vongThi=vt).delete()
 
-                # Danh sách thí sinh theo thứ hạng (1..20)
-                s_ids = [r["thiSinh"] for r in score_rows]
                 n = len(s_ids)
                 if n < 20:
                     # Không chặn hẳn, nhưng báo để bạn biết vì sao có thể không đủ 10 cặp
                     messages.warning(request, f"Chỉ lấy được Top {n} (có thể vòng trước chưa có đủ phiếu chấm cho 20 thí sinh).")
 
-                # Tạo cặp: 1-20, 2-19, ... (zip với danh sách đảo ngược)
-                pair_count = n // 2
+
                 pairs_created = 0
 
                 for i in range(pair_count):
@@ -277,8 +294,9 @@ def organize_view(request, ct_id=None):
 
                 messages.success(
                     request,
-                    f"Đã tạo {pairs_created} cặp đặc biệt từ Top {min(n, 20)} vòng {prev_round.tenVongThi}."
+                    f"Đã tạo {pairs_created} cặp đặc biệt từ Top 20 tổng hiện tại."
                 )
+
                 return redirect(request.path)
             # --------------------------------------------------
             # Tạo bài thi
